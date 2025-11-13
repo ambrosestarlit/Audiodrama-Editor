@@ -299,7 +299,7 @@ body {
 /* プレイヘッド（シークバー） */
 .playhead {
     position: absolute;
-    top: 0;
+    top: 50px; /* timeline-headerの高さ分 */
     bottom: 0;
     width: 2px;
     background: var(--color-danger);
@@ -311,7 +311,7 @@ body {
 .playhead::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: -8px; /* 三角形の高さ分上に */
     left: -6px;
     width: 0;
     height: 0;
