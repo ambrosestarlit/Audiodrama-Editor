@@ -1,0 +1,374 @@
+// ==========================================
+// AudioEngine - Web Audio API管理クラス
+// ==========================================
+
+class AudioEngine {
+    constructor() {
+        this.audioContext = null;
+        this.masterGain = null;
+        this.limiter = null;
+        this.eq = {
+            low: null,
+            mid: null,
+            high: null
+        };
+        this.tracks = [];
+        this.isPlaying = false;
+        this.currentTime = 0;
+        this.duration = 0;
+        this.playbackRate = 1.0;
+        this.sampleRate = 48000;
+        
+        this.init();
+    }
+    
+    // 初期化
+    init() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: this.sampleRate
+            });
+            
+            // マスターゲイン
+            this.masterGain = this.audioContext.createGain();
+            this.masterGain.gain.value = 0.8;
+            
+            // イコライザー設定
+            this.setupEqualizer();
+            
+            // リミッター設定
+            this.setupLimiter();
+            
+            // 接続: EQ -> Limiter -> Master -> Destination
+            this.eq.low.connect(this.eq.mid);
+            this.eq.mid.connect(this.eq.high);
+            this.eq.high.connect(this.limiter);
+            this.limiter.connect(this.masterGain);
+            this.masterGain.connect(this.audioContext.destination);
+            
+            console.log('AudioEngine initialized:', this.audioContext);
+        } catch (error) {
+            console.error('AudioContext initialization failed:', error);
+            alert('お使いのブラウザは音声機能に対応していません。');
+        }
+    }
+    
+    // イコライザー設定
+    setupEqualizer() {
+        // Low (100Hz)
+        this.eq.low = this.audioContext.createBiquadFilter();
+        this.eq.low.type = 'lowshelf';
+        this.eq.low.frequency.value = 100;
+        this.eq.low.gain.value = 0;
+        
+        // Mid (1kHz)
+        this.eq.mid = this.audioContext.createBiquadFilter();
+        this.eq.mid.type = 'peaking';
+        this.eq.mid.frequency.value = 1000;
+        this.eq.mid.Q.value = 1;
+        this.eq.mid.gain.value = 0;
+        
+        // High (10kHz)
+        this.eq.high = this.audioContext.createBiquadFilter();
+        this.eq.high.type = 'highshelf';
+        this.eq.high.frequency.value = 10000;
+        this.eq.high.gain.value = 0;
+    }
+    
+    // W1 Limiter風のリミッター設定
+    setupLimiter() {
+        this.limiter = this.audioContext.createDynamicsCompressor();
+        this.limiter.threshold.value = -6;  // dB
+        this.limiter.knee.value = 0;  // ハードニー
+        this.limiter.ratio.value = 20;  // 高いレシオでリミッター動作
+        this.limiter.attack.value = 0.003;  // 3ms（高速アタック）
+        this.limiter.release.value = 0.25;  // 250ms
+    }
+    
+    // EQ調整
+    setEQ(band, value) {
+        if (this.eq[band]) {
+            this.eq[band].gain.value = value;
+        }
+    }
+    
+    // リミッター調整
+    setLimiter(param, value) {
+        if (!this.limiter) return;
+        
+        switch(param) {
+            case 'threshold':
+                this.limiter.threshold.value = value;
+                break;
+            case 'release':
+                this.limiter.release.value = value / 1000; // msからsへ変換
+                break;
+            case 'ceiling':
+                // Output ceilingは後処理で実装（ゲイン調整）
+                const ceiling = value;
+                const makeup = Math.abs(ceiling);
+                this.masterGain.gain.value = Math.pow(10, makeup / 20);
+                break;
+        }
+    }
+    
+    // オーディオファイルをデコード
+    async decodeAudioFile(arrayBuffer) {
+        try {
+            const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+            return audioBuffer;
+        } catch (error) {
+            console.error('Audio decode error:', error);
+            throw new Error('音声ファイルのデコードに失敗しました');
+        }
+    }
+    
+    // トラックの作成
+    createTrack(id) {
+        const track = {
+            id: id,
+            name: `トラック ${id}`,
+            gain: this.audioContext.createGain(),
+            pan: this.audioContext.createStereoPanner(),
+            mute: false,
+            solo: false,
+            volume: 0.8,
+            clips: []
+        };
+        
+        track.gain.gain.value = track.volume;
+        
+        // 接続: Track Gain -> Pan -> EQ
+        track.gain.connect(track.pan);
+        track.pan.connect(this.eq.low);
+        
+        this.tracks.push(track);
+        return track;
+    }
+    
+    // トラックの取得
+    getTrack(id) {
+        return this.tracks.find(t => t.id === id);
+    }
+    
+    // トラックの削除
+    removeTrack(id) {
+        const index = this.tracks.findIndex(t => t.id === id);
+        if (index !== -1) {
+            const track = this.tracks[index];
+            track.gain.disconnect();
+            track.pan.disconnect();
+            this.tracks.splice(index, 1);
+        }
+    }
+    
+    // クリップの追加
+    addClip(trackId, clipData) {
+        const track = this.getTrack(trackId);
+        if (!track) return null;
+        
+        const clip = {
+            id: clipData.id,
+            name: clipData.name,
+            audioBuffer: clipData.audioBuffer,
+            startTime: clipData.startTime || 0,
+            offset: clipData.offset || 0,
+            duration: clipData.duration || clipData.audioBuffer.duration,
+            source: null,
+            fadeIn: clipData.fadeIn || 0,
+            fadeOut: clipData.fadeOut || 0
+        };
+        
+        track.clips.push(clip);
+        return clip;
+    }
+    
+    // クリップの削除
+    removeClip(trackId, clipId) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        const index = track.clips.findIndex(c => c.id === clipId);
+        if (index !== -1) {
+            const clip = track.clips[index];
+            if (clip.source) {
+                clip.source.stop();
+                clip.source.disconnect();
+            }
+            track.clips.splice(index, 1);
+        }
+    }
+    
+    // トラックのミュート
+    setTrackMute(trackId, mute) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.mute = mute;
+        track.gain.gain.value = mute ? 0 : track.volume;
+    }
+    
+    // トラックのソロ
+    setTrackSolo(trackId, solo) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.solo = solo;
+        
+        // ソロトラックがある場合、他のトラックをミュート
+        const hasSolo = this.tracks.some(t => t.solo);
+        this.tracks.forEach(t => {
+            if (hasSolo) {
+                t.gain.gain.value = (t.solo && !t.mute) ? t.volume : 0;
+            } else {
+                t.gain.gain.value = t.mute ? 0 : t.volume;
+            }
+        });
+    }
+    
+    // トラックのボリューム調整
+    setTrackVolume(trackId, volume) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.volume = volume;
+        if (!track.mute) {
+            track.gain.gain.value = volume;
+        }
+    }
+    
+    // トラックのパン調整
+    setTrackPan(trackId, pan) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.pan.pan.value = pan; // -1 (左) から 1 (右)
+    }
+    
+    // 再生
+    async play(startTime = 0) {
+        if (this.isPlaying) return;
+        
+        // AudioContextを再開（ブラウザのオートプレイポリシー対策）
+        if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
+        
+        this.isPlaying = true;
+        this.currentTime = startTime;
+        const contextStartTime = this.audioContext.currentTime;
+        
+        // 全トラックの全クリップを再生
+        this.tracks.forEach(track => {
+            track.clips.forEach(clip => {
+                this.playClip(track, clip, startTime, contextStartTime);
+            });
+        });
+    }
+    
+    // クリップを再生
+    playClip(track, clip, playbackStartTime, contextStartTime) {
+        const clipStartTime = clip.startTime;
+        const clipEndTime = clipStartTime + clip.duration;
+        
+        // 再生範囲外のクリップはスキップ
+        if (playbackStartTime > clipEndTime) return;
+        
+        // AudioBufferSourceNodeを作成
+        const source = this.audioContext.createBufferSource();
+        source.buffer = clip.audioBuffer;
+        source.playbackRate.value = this.playbackRate;
+        
+        // フェードイン/アウト処理
+        const gainNode = this.audioContext.createGain();
+        source.connect(gainNode);
+        gainNode.connect(track.gain);
+        
+        // フェードイン
+        if (clip.fadeIn > 0) {
+            gainNode.gain.setValueAtTime(0, contextStartTime);
+            gainNode.gain.linearRampToValueAtTime(1, contextStartTime + clip.fadeIn);
+        } else {
+            gainNode.gain.setValueAtTime(1, contextStartTime);
+        }
+        
+        // フェードアウト
+        if (clip.fadeOut > 0) {
+            const fadeOutStart = contextStartTime + clip.duration - clip.fadeOut;
+            gainNode.gain.setValueAtTime(1, fadeOutStart);
+            gainNode.gain.linearRampToValueAtTime(0, fadeOutStart + clip.fadeOut);
+        }
+        
+        // 再生開始位置とオフセットを計算
+        const offset = clip.offset + Math.max(0, playbackStartTime - clipStartTime);
+        const duration = clipEndTime - Math.max(playbackStartTime, clipStartTime);
+        const when = contextStartTime + Math.max(0, clipStartTime - playbackStartTime);
+        
+        source.start(when, offset, duration);
+        
+        // 停止時の処理
+        source.onended = () => {
+            source.disconnect();
+            gainNode.disconnect();
+        };
+        
+        clip.source = source;
+    }
+    
+    // 一時停止
+    pause() {
+        if (!this.isPlaying) return;
+        
+        this.isPlaying = false;
+        
+        // 全クリップのソースを停止
+        this.tracks.forEach(track => {
+            track.clips.forEach(clip => {
+                if (clip.source) {
+                    clip.source.stop();
+                    clip.source.disconnect();
+                    clip.source = null;
+                }
+            });
+        });
+    }
+    
+    // 停止
+    stop() {
+        this.pause();
+        this.currentTime = 0;
+    }
+    
+    // 全体の長さを計算
+    calculateDuration() {
+        let maxDuration = 0;
+        this.tracks.forEach(track => {
+            track.clips.forEach(clip => {
+                const clipEnd = clip.startTime + clip.duration;
+                if (clipEnd > maxDuration) {
+                    maxDuration = clipEnd;
+                }
+            });
+        });
+        this.duration = maxDuration;
+        return maxDuration;
+    }
+    
+    // マスターボリューム調整
+    setMasterVolume(volume) {
+        if (this.masterGain) {
+            this.masterGain.gain.value = volume;
+        }
+    }
+    
+    // クリーンアップ
+    dispose() {
+        this.stop();
+        if (this.audioContext) {
+            this.audioContext.close();
+        }
+    }
+}
+
+// グローバルインスタンス
+window.audioEngine = new AudioEngine();
