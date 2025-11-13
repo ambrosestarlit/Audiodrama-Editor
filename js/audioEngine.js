@@ -247,12 +247,13 @@ class AudioEngine {
     
     // 再生
     async play(startTime = 0) {
-        if (this.isPlaying) return;
-        
         // AudioContextを再開（ブラウザのオートプレイポリシー対策）
         if (this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
+            console.log('AudioContext resumed, state:', this.audioContext.state);
         }
+        
+        if (this.isPlaying) return;
         
         this.isPlaying = true;
         this.currentTime = startTime;
@@ -264,6 +265,8 @@ class AudioEngine {
                 this.playClip(track, clip, startTime, contextStartTime);
             });
         });
+        
+        console.log('Playback started');
     }
     
     // クリップを再生
