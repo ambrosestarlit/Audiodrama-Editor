@@ -306,16 +306,26 @@ class VoiceDramaDAW {
         window.audioEngine.stop();
         this.stopTimeUpdate();
         this.updateTimeDisplay();
+        
+        // プレイヘッドを0に戻す
+        const playhead = document.querySelector('.playhead');
+        if (playhead) {
+            playhead.style.left = '0px';
+        }
     }
     
     // 時間表示の更新を開始
     startTimeUpdate() {
+        // プレイヘッドを作成
+        this.createPlayhead();
+        
         const update = () => {
             if (!this.isPlaying) return;
             
             if (window.audioEngine.audioContext) {
                 window.audioEngine.currentTime += 0.016; // 約60FPS
                 this.updateTimeDisplay();
+                this.updatePlayhead();
                 
                 // 終了チェック
                 if (window.audioEngine.currentTime >= window.audioEngine.duration) {
@@ -336,6 +346,30 @@ class VoiceDramaDAW {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
+    }
+    
+    // プレイヘッドを作成
+    createPlayhead() {
+        // 既存のプレイヘッドを削除
+        const existing = document.querySelector('.playhead');
+        if (existing) return; // 既に存在する場合は何もしない
+        
+        const tracksContainer = document.getElementById('tracksContainer');
+        if (!tracksContainer) return;
+        
+        const playhead = document.createElement('div');
+        playhead.className = 'playhead';
+        playhead.style.left = '0px';
+        tracksContainer.appendChild(playhead);
+    }
+    
+    // プレイヘッドを更新
+    updatePlayhead() {
+        const playhead = document.querySelector('.playhead');
+        if (!playhead) return;
+        
+        const leftPos = window.audioEngine.currentTime * window.trackManager.pixelsPerSecond;
+        playhead.style.left = `${leftPos}px`;
     }
     
     // 時間表示を更新
