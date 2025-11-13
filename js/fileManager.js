@@ -99,7 +99,7 @@ class FileManager {
                         category: category,
                         duration: audioBuffer.duration,
                         audioBuffer: audioBuffer,
-                        arrayBuffer: arrayBuffer, // 保存用
+                        arrayBuffer: arrayBuffer, // メモリ用
                         size: file.size,
                         type: file.type,
                         addedAt: new Date().toISOString()
@@ -108,14 +108,14 @@ class FileManager {
                     // カテゴリ別配列に追加
                     this.audioFiles[category].push(audioFile);
                     
-                    // IndexedDBに保存
+                    // IndexedDBに保存（ArrayBufferをBlobに変換）
                     await window.projectManager.saveAudioFile({
                         id: audioFile.id,
                         name: audioFile.name,
                         fileName: audioFile.fileName,
                         category: audioFile.category,
                         duration: audioFile.duration,
-                        arrayBuffer: audioFile.arrayBuffer,
+                        audioData: new Blob([arrayBuffer], { type: file.type }), // Blobに変換
                         size: audioFile.size,
                         type: audioFile.type,
                         addedAt: audioFile.addedAt
@@ -215,9 +215,13 @@ class FileManager {
         try {
             const fileData = await window.projectManager.getAudioFile(fileId);
             if (fileData) {
+                // BlobをArrayBufferに変換
+                const arrayBuffer = await fileData.audioData.arrayBuffer();
+                
                 // AudioBufferを再生成
-                const audioBuffer = await window.audioEngine.decodeAudioFile(fileData.arrayBuffer);
+                const audioBuffer = await window.audioEngine.decodeAudioFile(arrayBuffer);
                 fileData.audioBuffer = audioBuffer;
+                fileData.arrayBuffer = arrayBuffer;
                 
                 // メモリに追加
                 this.audioFiles[fileData.category].push(fileData);
@@ -271,9 +275,13 @@ class FileManager {
             
             for (const fileData of savedFiles) {
                 try {
+                    // BlobをArrayBufferに変換
+                    const arrayBuffer = await fileData.audioData.arrayBuffer();
+                    
                     // AudioBufferを再生成
-                    const audioBuffer = await window.audioEngine.decodeAudioFile(fileData.arrayBuffer);
+                    const audioBuffer = await window.audioEngine.decodeAudioFile(arrayBuffer);
                     fileData.audioBuffer = audioBuffer;
+                    fileData.arrayBuffer = arrayBuffer;
                     
                     // メモリに追加
                     this.audioFiles[fileData.category].push(fileData);
