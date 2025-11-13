@@ -242,6 +242,7 @@ body {
     flex: 1;
     overflow: auto;
     background: var(--color-bg-primary);
+    position: relative; /* プレイヘッドの親要素として機能 */
 }
 
 .timeline-header {
@@ -301,6 +302,7 @@ body {
     position: absolute;
     top: 50px; /* timeline-headerの高さ分 */
     bottom: 0;
+    left: 200px; /* 初期位置：トラックヘッダー幅 */
     width: 2px;
     background: var(--color-danger);
     z-index: 100;
@@ -318,6 +320,19 @@ body {
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
     border-top: 8px solid var(--color-danger);
+}
+
+/* timeline-areaのトラックヘッダー部分をマスク */
+.timeline-area::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200px; /* トラックヘッダー幅 */
+    height: 100%;
+    background: transparent;
+    z-index: 99;
+    pointer-events: none;
 }
 
 .track {
