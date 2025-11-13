@@ -53,17 +53,29 @@ class VoiceDramaDAW {
         });
         
         // トランスポートコントロール
-        document.getElementById('playBtn')?.addEventListener('click', () => {
-            this.play();
-        });
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn) {
+            playBtn.addEventListener('click', async () => {
+                console.log('Play button clicked in app.js');
+                await this.play();
+            });
+        }
         
-        document.getElementById('pauseBtn')?.addEventListener('click', () => {
-            this.pause();
-        });
+        const pauseBtn = document.getElementById('pauseBtn');
+        if (pauseBtn) {
+            pauseBtn.addEventListener('click', () => {
+                console.log('Pause button clicked');
+                this.pause();
+            });
+        }
         
-        document.getElementById('stopBtn')?.addEventListener('click', () => {
-            this.stop();
-        });
+        const stopBtn = document.getElementById('stopBtn');
+        if (stopBtn) {
+            stopBtn.addEventListener('click', () => {
+                console.log('Stop button clicked');
+                this.stop();
+            });
+        }
         
         // ズームコントロール
         document.getElementById('zoomInBtn')?.addEventListener('click', () => {
