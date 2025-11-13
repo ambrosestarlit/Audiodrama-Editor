@@ -310,7 +310,7 @@ class VoiceDramaDAW {
         // プレイヘッドを0に戻す
         const playhead = document.querySelector('.playhead');
         if (playhead) {
-            playhead.style.left = '200px'; // トラックヘッダー幅分オフセット
+            playhead.style.left = '0px';
         }
     }
     
@@ -354,13 +354,13 @@ class VoiceDramaDAW {
         const existing = document.querySelector('.playhead');
         if (existing) return; // 既に存在する場合は何もしない
         
-        const timelineArea = document.getElementById('timelineArea');
-        if (!timelineArea) return;
+        const tracksContainer = document.getElementById('tracksContainer');
+        if (!tracksContainer) return;
         
         const playhead = document.createElement('div');
         playhead.className = 'playhead';
-        playhead.style.left = '200px'; // トラックヘッダー幅分オフセット
-        timelineArea.appendChild(playhead);
+        playhead.style.left = '0px';
+        tracksContainer.appendChild(playhead);
     }
     
     // プレイヘッドを更新
@@ -368,7 +368,7 @@ class VoiceDramaDAW {
         const playhead = document.querySelector('.playhead');
         if (!playhead) return;
         
-        const leftPos = 200 + (window.audioEngine.currentTime * window.trackManager.pixelsPerSecond);
+        const leftPos = window.audioEngine.currentTime * window.trackManager.pixelsPerSecond;
         playhead.style.left = `${leftPos}px`;
     }
     
