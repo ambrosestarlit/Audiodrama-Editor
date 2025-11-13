@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VoiceDrama DAW - ボイスドラマ制作ツール</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/theme.css">
+    <link rel="stylesheet" href="styles/responsive.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ヘッダー -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1 class="app-title">🎭 VoiceDrama DAW</h1>
+                <div class="project-info">
+                    <span id="projectName">新規プロジェクト</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button class="btn btn-primary" id="newProjectBtn">新規</button>
+                <button class="btn btn-primary" id="saveProjectBtn">保存</button>
+                <button class="btn btn-primary" id="loadProjectBtn">読込</button>
+                <button class="btn btn-success" id="exportBtn">書き出し</button>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <div class="main-container">
+            <!-- サイドバー（ファイルブラウザ） -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>📁 ファイル</h2>
+                    <button class="btn btn-small" id="importFilesBtn">ファイル追加</button>
+                </div>
+                <div class="file-tabs">
+                    <button class="tab-btn active" data-tab="dialogue">台詞</button>
+                    <button class="tab-btn" data-tab="sfx">効果音</button>
+                    <button class="tab-btn" data-tab="bgm">BGM</button>
+                    <button class="tab-btn" data-tab="ambience">環境音</button>
+                    <button class="tab-btn" data-tab="effects">エフェクト</button>
+                </div>
+                <div class="file-list-container">
+                    <div class="file-list active" id="dialogue-list"></div>
+                    <div class="file-list" id="sfx-list"></div>
+                    <div class="file-list" id="bgm-list"></div>
+                    <div class="file-list" id="ambience-list"></div>
+                    <div class="file-list" id="effects-list"></div>
+                </div>
+            </aside>
+
+            <!-- タイムラインエリア -->
+            <main class="timeline-container">
+                <!-- トランスポートコントロール -->
+                <div class="transport-controls">
+                    <button class="transport-btn" id="playBtn">▶️</button>
+                    <button class="transport-btn" id="pauseBtn">⏸️</button>
+                    <button class="transport-btn" id="stopBtn">⏹️</button>
+                    <div class="time-display">
+                        <span id="currentTime">00:00.000</span>
+                        <span>/</span>
+                        <span id="totalTime">00:00.000</span>
+                    </div>
+                    <div class="zoom-controls">
+                        <button class="btn btn-small" id="zoomInBtn">+</button>
+                        <button class="btn btn-small" id="zoomOutBtn">-</button>
+                        <button class="btn btn-small" id="fitBtn">全体</button>
+                    </div>
+                </div>
+
+                <!-- タイムライン -->
+                <div class="timeline-area" id="timelineArea">
+                    <div class="timeline-header">
+                        <div class="track-header-column">トラック</div>
+                        <div class="timeline-ruler" id="timelineRuler"></div>
+                    </div>
+                    <div class="tracks-container" id="tracksContainer">
+                        <!-- トラックが動的に追加される -->
+                    </div>
+                </div>
+
+                <!-- トラック追加ボタン -->
+                <div class="track-actions">
+                    <button class="btn btn-primary" id="addTrackBtn">+ トラック追加</button>
+                    <span class="track-count">トラック数: <span id="trackCount">0</span>/30</span>
+                </div>
+            </main>
+
+            <!-- エフェクトパネル -->
+            <aside class="effects-panel" id="effectsPanel">
+                <div class="panel-header">
+                    <h2>🎛️ エフェクト</h2>
+                    <button class="btn-close" id="closeEffectsBtn">✕</button>
+                </div>
+                <div class="effects-content">
+                    <div class="effect-section">
+                        <h3>イコライザー</h3>
+                        <div class="eq-controls">
+                            <div class="eq-band">
+                                <label>Low (100Hz)</label>
+                                <input type="range" class="eq-slider" id="eqLow" min="-12" max="12" value="0" step="0.1">
+                                <span class="eq-value">0 dB</span>
+                            </div>
+                            <div class="eq-band">
+                                <label>Mid (1kHz)</label>
+                                <input type="range" class="eq-slider" id="eqMid" min="-12" max="12" value="0" step="0.1">
+                                <span class="eq-value">0 dB</span>
+                            </div>
+                            <div class="eq-band">
+                                <label>High (10kHz)</label>
+                                <input type="range" class="eq-slider" id="eqHigh" min="-12" max="12" value="0" step="0.1">
+                                <span class="eq-value">0 dB</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="effect-section">
+                        <h3>リミッター (W1 Style)</h3>
+                        <div class="limiter-controls">
+                            <div class="control-row">
+                                <label>Threshold</label>
+                                <input type="range" id="limiterThreshold" min="-24" max="0" value="-6" step="0.1">
+                                <span class="control-value">-6 dB</span>
+                            </div>
+                            <div class="control-row">
+                                <label>Release</label>
+                                <input type="range" id="limiterRelease" min="10" max="1000" value="250" step="10">
+                                <span class="control-value">250 ms</span>
+                            </div>
+                            <div class="control-row">
+                                <label>Output Ceiling</label>
+                                <input type="range" id="limiterCeiling" min="-6" max="0" value="-0.1" step="0.1">
+                                <span class="control-value">-0.1 dB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- モーダル：プロジェクト管理 -->
+    <div class="modal" id="projectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>プロジェクト管理</h2>
+                <button class="btn-close" id="closeProjectModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="project-list" id="projectList">
+                    <!-- プロジェクト一覧が表示される -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル：書き出し -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>書き出し設定</h2>
+                <button class="btn-close" id="closeExportModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="export-options">
+                    <div class="option-group">
+                        <label>ファイル形式</label>
+                        <select id="exportFormat" class="form-select">
+                            <option value="wav">WAV (非圧縮)</option>
+                            <option value="mp3">MP3 (圧縮)</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label>サンプルレート</label>
+                        <select id="exportSampleRate" class="form-select">
+                            <option value="44100">44.1 kHz</option>
+                            <option value="48000" selected>48 kHz</option>
+                            <option value="96000">96 kHz</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label>ビットデプス</label>
+                        <select id="exportBitDepth" class="form-select">
+                            <option value="16">16 bit</option>
+                            <option value="24" selected>24 bit</option>
+                            <option value="32">32 bit float</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success btn-large" id="startExportBtn">書き出し開始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ファイル入力（非表示） -->
+    <input type="file" id="fileInput" multiple accept="audio/*" style="display: none;">
+
+    <script src="js/audioEngine.js"></script>
+    <script src="js/projectManager.js"></script>
+    <script src="js/trackManager.js"></script>
+    <script src="js/fileManager.js"></script>
+    <script src="js/effectsManager.js"></script>
+    <script src="js/exportManager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

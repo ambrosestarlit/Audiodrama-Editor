@@ -1,0 +1,428 @@
+/* ==========================================
+   テーマカラー設定
+   ========================================== */
+
+:root {
+    /* プライマリカラー（チョコレート系） */
+    --color-primary: #8B6F47;
+    --color-primary-light: #A0855B;
+    --color-primary-dark: #6B5637;
+    
+    /* アクセントカラー（ビスケット/ベージュ系） */
+    --color-accent: #D4A574;
+    --color-accent-light: #E8C9A1;
+    --color-accent-dark: #B88A5F;
+    
+    /* 背景色 */
+    --color-bg-primary: #FFF9F0;
+    --color-bg-secondary: #FFF4E6;
+    --color-bg-tertiary: #FFEFD5;
+    
+    /* テキストカラー */
+    --color-text-primary: #4A3728;
+    --color-text-secondary: #6B5637;
+    --color-text-muted: #8B7355;
+    
+    /* ボーダー */
+    --color-border: #D4A574;
+    --color-border-light: #E8C9A1;
+    
+    /* 状態色 */
+    --color-success: #7BAF6F;
+    --color-warning: #E8B44C;
+    --color-danger: #D67373;
+    --color-info: #6FA3B8;
+    
+    /* シャドウ */
+    --shadow-small: 0 2px 4px rgba(139, 111, 71, 0.1);
+    --shadow-medium: 0 4px 12px rgba(139, 111, 71, 0.15);
+    --shadow-large: 0 8px 24px rgba(139, 111, 71, 0.2);
+    
+    /* 角丸 */
+    --radius-small: 8px;
+    --radius-medium: 12px;
+    --radius-large: 16px;
+    --radius-xl: 20px;
+    
+    /* スペーシング */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    
+    /* トランジション */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+}
+
+/* ==========================================
+   カスタムスクロールバー（角丸）
+   ========================================== */
+
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-medium);
+    margin: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-accent);
+    border-radius: var(--radius-medium);
+    border: 2px solid var(--color-bg-secondary);
+    transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-accent-dark);
+}
+
+::-webkit-scrollbar-corner {
+    background: var(--color-bg-secondary);
+}
+
+/* Firefox用スクロールバー */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-accent) var(--color-bg-secondary);
+}
+
+/* ==========================================
+   ボタンスタイル
+   ========================================== */
+
+.btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--radius-medium);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-small);
+    font-family: inherit;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-small);
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--color-primary-light);
+}
+
+.btn-success {
+    background: var(--color-success);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #6A9E60;
+}
+
+.btn-warning {
+    background: var(--color-warning);
+    color: var(--color-text-primary);
+}
+
+.btn-danger {
+    background: var(--color-danger);
+    color: white;
+}
+
+.btn-small {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 12px;
+}
+
+.btn-large {
+    padding: var(--spacing-md) var(--spacing-xl);
+    font-size: 16px;
+    width: 100%;
+}
+
+.btn-close {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: var(--spacing-xs);
+    border-radius: var(--radius-small);
+    transition: background var(--transition-fast);
+}
+
+.btn-close:hover {
+    background: var(--color-bg-tertiary);
+}
+
+/* ==========================================
+   カード・パネルスタイル
+   ========================================== */
+
+.card {
+    background: white;
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-medium);
+    padding: var(--spacing-lg);
+    transition: box-shadow var(--transition-normal);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-large);
+}
+
+.panel {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-medium);
+    border: 2px solid var(--color-border-light);
+    padding: var(--spacing-md);
+}
+
+/* ==========================================
+   フォーム要素
+   ========================================== */
+
+.form-select,
+input[type="text"],
+input[type="number"] {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 2px solid var(--color-border-light);
+    border-radius: var(--radius-medium);
+    background: white;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--color-text-primary);
+    transition: border-color var(--transition-fast);
+}
+
+.form-select:focus,
+input[type="text"]:focus,
+input[type="number"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+/* スライダー */
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: var(--radius-small);
+    background: var(--color-bg-tertiary);
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+    box-shadow: var(--shadow-small);
+    transition: all var(--transition-fast);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    background: var(--color-primary-light);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+    border: none;
+    box-shadow: var(--shadow-small);
+    transition: all var(--transition-fast);
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    background: var(--color-primary-light);
+}
+
+/* ==========================================
+   タブスタイル
+   ========================================== */
+
+.tab-btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--radius-medium) var(--radius-medium) 0 0;
+    transition: all var(--transition-fast);
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.tab-btn.active {
+    background: white;
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    font-weight: 600;
+}
+
+/* ==========================================
+   モーダルスタイル
+   ========================================== */
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(74, 55, 40, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn var(--transition-normal);
+}
+
+.modal.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-large);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideUp var(--transition-normal);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: var(--spacing-lg);
+    border-bottom: 2px solid var(--color-border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-bg-secondary);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 20px;
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+    max-height: calc(80vh - 80px);
+}
+
+/* ==========================================
+   バッジ・タグ
+   ========================================== */
+
+.badge {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-small);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.badge-accent {
+    background: var(--color-accent-light);
+    color: var(--color-text-primary);
+}
+
+.badge-success {
+    background: var(--color-success);
+    color: white;
+}
+
+/* ==========================================
+   アニメーション
+   ========================================== */
+
+.fade-in {
+    animation: fadeIn var(--transition-normal);
+}
+
+.slide-in {
+    animation: slideIn var(--transition-normal);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ホバーエフェクト */
+.hover-lift {
+    transition: transform var(--transition-fast);
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
