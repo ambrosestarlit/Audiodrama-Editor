@@ -268,6 +268,12 @@ class VoiceDramaDAW {
     async play() {
         if (this.isPlaying) return;
         
+        // AudioContextを再開
+        if (window.audioEngine.audioContext.state === 'suspended') {
+            await window.audioEngine.audioContext.resume();
+            console.log('AudioContext resumed');
+        }
+        
         this.isPlaying = true;
         await window.audioEngine.play(window.audioEngine.currentTime);
         this.startTimeUpdate();
