@@ -140,7 +140,8 @@ class AudioEngine {
             solo: false,
             volume: 0.8,
             clips: [],
-            limiterEnabled: false
+            limiterEnabled: false,
+            eqEnabled: false
         };
         
         track.gain.gain.value = track.volume;
@@ -166,13 +167,10 @@ class AudioEngine {
         track.eq.high.frequency.value = 10000;
         track.eq.high.gain.value = 0;
         
-        // 接続: Track Gain -> Pan -> EQ Low -> EQ Mid -> EQ High -> (Limiter) -> Master EQ
+        // 接続: Track Gain -> Pan -> (EQ) -> (Limiter) -> Master EQ
         track.gain.connect(track.pan);
-        track.pan.connect(track.eq.low);
-        track.eq.low.connect(track.eq.mid);
-        track.eq.mid.connect(track.eq.high);
-        // 初期状態ではリミッターをバイパス
-        track.eq.high.connect(this.eq.low);
+        // 初期状態ではEQをバイパス
+        track.pan.connect(this.eq.low);
         
         this.tracks.push(track);
         return track;
@@ -277,6 +275,17 @@ class AudioEngine {
         track.pan.pan.value = pan; // -1 (左) から 1 (右)
     }
     
+    // トラックイコライザーの有効/無効
+    setTrackEQEnabled(trackId, enabled) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.eqEnabled = enabled;
+        
+        // 接続を再構築
+        this.reconnectTrackEffects(track);
+    }
+    
     // トラックリミッターの有効/無効
     setTrackLimiterEnabled(trackId, enabled) {
         const track = this.getTrack(trackId);
@@ -284,17 +293,38 @@ class AudioEngine {
         
         track.limiterEnabled = enabled;
         
-        // 接続を変更
+        // 接続を再構築
+        this.reconnectTrackEffects(track);
+    }
+    
+    // トラックエフェクトの接続を再構築
+    reconnectTrackEffects(track) {
+        // すべて切断
+        track.pan.disconnect();
+        track.eq.low.disconnect();
+        track.eq.mid.disconnect();
         track.eq.high.disconnect();
+        track.limiter.disconnect();
         
-        if (enabled) {
-            // EQ High -> Limiter -> Master EQ
-            track.eq.high.connect(track.limiter);
-            track.limiter.connect(this.eq.low);
-        } else {
-            // EQ High -> Master EQ (リミッターをバイパス)
-            track.eq.high.connect(this.eq.low);
+        // 接続を構築: Pan -> (EQ) -> (Limiter) -> Master EQ
+        let currentNode = track.pan;
+        
+        // EQが有効なら接続
+        if (track.eqEnabled) {
+            currentNode.connect(track.eq.low);
+            track.eq.low.connect(track.eq.mid);
+            track.eq.mid.connect(track.eq.high);
+            currentNode = track.eq.high;
         }
+        
+        // リミッターが有効なら接続
+        if (track.limiterEnabled) {
+            currentNode.connect(track.limiter);
+            currentNode = track.limiter;
+        }
+        
+        // 最後にMaster EQへ接続
+        currentNode.connect(this.eq.low);
     }
     
     // トラックリミッターのパラメータ設定
