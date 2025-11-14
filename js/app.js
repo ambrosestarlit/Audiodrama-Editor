@@ -57,7 +57,12 @@ class VoiceDramaDAW {
         if (playBtn) {
             playBtn.addEventListener('click', async () => {
                 console.log('Play button clicked in app.js');
-                await this.play();
+                try {
+                    await this.play();
+                    console.log('Play completed successfully');
+                } catch (error) {
+                    console.error('Play error:', error);
+                }
             });
         }
         
@@ -318,11 +323,17 @@ class VoiceDramaDAW {
     
     // 時間表示の更新を開始
     startTimeUpdate() {
+        console.log('startTimeUpdate called, isPlaying:', this.isPlaying);
+        
         // プレイヘッドを作成
         this.createPlayhead();
         
         const update = () => {
-            if (!this.isPlaying) return;
+            console.log('update frame, isPlaying:', this.isPlaying);
+            if (!this.isPlaying) {
+                console.log('Animation stopped because isPlaying is false');
+                return;
+            }
             
             if (window.audioEngine.audioContext) {
                 window.audioEngine.currentTime += 0.016; // 約60FPS
