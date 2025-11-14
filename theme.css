@@ -111,7 +111,7 @@
     border: none;
     border-radius: var(--radius-medium);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: normal;
     cursor: pointer;
     transition: all var(--transition-fast);
     box-shadow: var(--shadow-small);
@@ -350,7 +350,7 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .checkbox-label span {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: normal;
     color: var(--color-text-primary);
 }
 
@@ -364,7 +364,8 @@ input[type="range"]::-moz-range-thumb:hover {
     background: transparent;
     color: var(--color-text-secondary);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: normal;
+    font-family: 'BananaSlip', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     cursor: pointer;
     border-radius: var(--radius-medium) var(--radius-medium) 0 0;
     transition: all var(--transition-fast);
@@ -380,7 +381,7 @@ input[type="range"]::-moz-range-thumb:hover {
     background: white;
     color: var(--color-primary);
     border-bottom-color: var(--color-primary);
-    font-weight: 600;
+    font-weight: normal;
 }
 
 /* ==========================================
@@ -467,7 +468,7 @@ input[type="range"]::-moz-range-thumb:hover {
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: var(--radius-small);
     font-size: 11px;
-    font-weight: 600;
+    font-weight: normal;
     text-transform: uppercase;
 }
 
