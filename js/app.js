@@ -52,6 +52,57 @@ class VoiceDramaDAW {
             this.openLoadProjectModal();
         });
         
+        // クリップゲイン調整ポップアップ
+        const clipGainSlider = document.getElementById('clipGainSlider');
+        if (clipGainSlider) {
+            clipGainSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                const valueDisplay = document.getElementById('clipGainValue');
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+                }
+                
+                // リアルタイムでゲインを適用
+                if (window.trackManager.currentGainClip) {
+                    const { trackId, clipId } = window.trackManager.currentGainClip;
+                    window.trackManager.setClipGain(trackId, clipId, value);
+                }
+            });
+        }
+        
+        // ゲインプリセットボタン
+        document.querySelectorAll('.gain-preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const value = parseFloat(e.target.dataset.value);
+                const slider = document.getElementById('clipGainSlider');
+                if (slider) {
+                    slider.value = value;
+                    const valueDisplay = document.getElementById('clipGainValue');
+                    if (valueDisplay) {
+                        valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+                    }
+                    
+                    // ゲインを適用
+                    if (window.trackManager.currentGainClip) {
+                        const { trackId, clipId } = window.trackManager.currentGainClip;
+                        window.trackManager.setClipGain(trackId, clipId, value);
+                    }
+                }
+            });
+        });
+        
+        // クリップゲインポップアップを閉じる
+        const closeClipGainBtn = document.getElementById('closeClipGainBtn');
+        if (closeClipGainBtn) {
+            closeClipGainBtn.addEventListener('click', () => {
+                const popup = document.getElementById('clipGainPopup');
+                if (popup) {
+                    popup.style.display = 'none';
+                    window.trackManager.currentGainClip = null;
+                }
+            });
+        }
+        
         // アンドゥ・リドゥ
         document.getElementById('undoBtn')?.addEventListener('click', () => {
             window.historyManager.undo();

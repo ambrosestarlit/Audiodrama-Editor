@@ -185,7 +185,8 @@ class TrackManager {
             duration: audioFile.duration,
             offset: 0,
             fadeIn: 0,
-            fadeOut: 0
+            fadeOut: 0,
+            gain: 0  // dB単位のゲイン調整
         };
         
         track.clips.push(clip);
@@ -230,10 +231,10 @@ class TrackManager {
             this.selectClip(trackId, clip.id);
         });
         
-        // ダブルクリックでエフェクトパネルを開く
+        // ダブルクリックでゲイン調整ポップアップを開く
         clipElement.addEventListener('dblclick', (e) => {
             if (e.target.classList.contains('clip-resize-handle')) return;
-            window.effectsManager.openTrackEffects(trackId, clip.id);
+            this.openClipGainPopup(trackId, clip.id);
         });
         
         // ドラッグ移動
@@ -255,6 +256,34 @@ class TrackManager {
             e.stopPropagation();
             this.startDrag(e, 'resize-right', trackId, clip);
         });
+    }
+    
+    // クリップゲイン調整ポップアップを開く
+    openClipGainPopup(trackId, clipId) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        const clip = track.clips.find(c => c.id === clipId);
+        if (!clip) return;
+        
+        // ポップアップを表示
+        const popup = document.getElementById('clipGainPopup');
+        const title = document.getElementById('clipGainTitle');
+        const slider = document.getElementById('clipGainSlider');
+        const valueDisplay = document.getElementById('clipGainValue');
+        
+        if (popup && title && slider && valueDisplay) {
+            title.textContent = `🎚️ ${clip.name}`;
+            slider.value = clip.gain || 0;
+            valueDisplay.textContent = `${(clip.gain || 0).toFixed(1)} dB`;
+            popup.style.display = 'block';
+            
+            // 現在のポップアップ対象を保存
+            this.currentGainClip = { trackId, clipId };
+            
+            // ピーク情報を更新
+            this.updateClipGainInfo(trackId, clipId);
+        }
     }
     
     // クリップ選択
@@ -425,6 +454,69 @@ class TrackManager {
         const secs = Math.floor(seconds % 60);
         const ms = Math.floor((seconds % 1) * 1000);
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+    }
+    
+    // クリップゲイン情報を更新
+    async updateClipGainInfo(trackId, clipId) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        const clip = track.clips.find(c => c.id === clipId);
+        if (!clip) return;
+        
+        const audioFile = await window.fileManager.getAudioFile(clip.fileId);
+        if (!audioFile || !audioFile.audioBuffer) return;
+        
+        // ピーク値を計算
+        let peak = 0;
+        for (let channel = 0; channel < audioFile.audioBuffer.numberOfChannels; channel++) {
+            const channelData = audioFile.audioBuffer.getChannelData(channel);
+            for (let i = 0; i < channelData.length; i++) {
+                const abs = Math.abs(channelData[i]);
+                if (abs > peak) peak = abs;
+            }
+        }
+        
+        const peakDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+        const gainDb = clip.gain || 0;
+        const adjustedPeakDb = peakDb + gainDb;
+        
+        // 表示を更新
+        const currentPeakElement = document.getElementById('clipCurrentPeak');
+        const adjustedPeakElement = document.getElementById('clipAdjustedPeak');
+        
+        if (currentPeakElement) {
+            currentPeakElement.textContent = `${peakDb.toFixed(1)} dB`;
+            currentPeakElement.style.color = peakDb > -0.1 ? 'var(--color-danger)' : 'var(--color-primary)';
+        }
+        
+        if (adjustedPeakElement) {
+            adjustedPeakElement.textContent = `${adjustedPeakDb.toFixed(1)} dB`;
+            adjustedPeakElement.style.color = adjustedPeakDb > -0.1 ? 'var(--color-danger)' : 'var(--color-primary)';
+        }
+    }
+    
+    // クリップゲインを設定
+    setClipGain(trackId, clipId, gainDb) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        const clip = track.clips.find(c => c.id === clipId);
+        if (!clip) return;
+        
+        clip.gain = gainDb;
+        
+        // audioEngineのクリップも更新
+        const audioTrack = window.audioEngine.getTrack(trackId);
+        if (audioTrack) {
+            const audioClip = audioTrack.clips.find(c => c.id === clipId);
+            if (audioClip) {
+                audioClip.gain = gainDb;
+            }
+        }
+        
+        // ピーク情報を更新
+        this.updateClipGainInfo(trackId, clipId);
     }
     
     // 全トラッククリア

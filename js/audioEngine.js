@@ -335,18 +335,21 @@ class AudioEngine {
         source.connect(gainNode);
         gainNode.connect(track.gain);
         
+        // クリップゲインを適用
+        const clipGainLinear = clip.gain ? Math.pow(10, clip.gain / 20) : 1.0;
+        
         // フェードイン
         if (clip.fadeIn > 0) {
             gainNode.gain.setValueAtTime(0, contextStartTime);
-            gainNode.gain.linearRampToValueAtTime(1, contextStartTime + clip.fadeIn);
+            gainNode.gain.linearRampToValueAtTime(clipGainLinear, contextStartTime + clip.fadeIn);
         } else {
-            gainNode.gain.setValueAtTime(1, contextStartTime);
+            gainNode.gain.setValueAtTime(clipGainLinear, contextStartTime);
         }
         
         // フェードアウト
         if (clip.fadeOut > 0) {
             const fadeOutStart = contextStartTime + clip.duration - clip.fadeOut;
-            gainNode.gain.setValueAtTime(1, fadeOutStart);
+            gainNode.gain.setValueAtTime(clipGainLinear, fadeOutStart);
             gainNode.gain.linearRampToValueAtTime(0, fadeOutStart + clip.fadeOut);
         }
         
