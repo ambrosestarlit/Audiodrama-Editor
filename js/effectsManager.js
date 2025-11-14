@@ -37,6 +37,9 @@ class EffectsManager {
                 
                 // FXボタンの状態を更新
                 this.updateFXButtonState(this.currentTrackId);
+                
+                // 波形を更新
+                this.updateTrackClipsWaveforms(this.currentTrackId);
             });
         }
         
@@ -53,6 +56,9 @@ class EffectsManager {
                 if (valueDisplay) {
                     valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
                 }
+                
+                // 波形を更新
+                this.updateTrackClipsWaveforms(this.currentTrackId);
             });
         }
         
@@ -69,6 +75,9 @@ class EffectsManager {
                 if (valueDisplay) {
                     valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
                 }
+                
+                // 波形を更新
+                this.updateTrackClipsWaveforms(this.currentTrackId);
             });
         }
         
@@ -85,6 +94,9 @@ class EffectsManager {
                 if (valueDisplay) {
                     valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
                 }
+                
+                // 波形を更新
+                this.updateTrackClipsWaveforms(this.currentTrackId);
             });
         }
         
@@ -119,6 +131,9 @@ class EffectsManager {
                             valueDisplay.textContent = `${values.high >= 0 ? '+' : ''}${values.high.toFixed(1)} dB`;
                         }
                     }
+                    
+                    // 波形を更新
+                    this.updateTrackClipsWaveforms(this.currentTrackId);
                 }
             });
         });
@@ -141,6 +156,9 @@ class EffectsManager {
                 
                 // FXボタンの状態を更新
                 this.updateFXButtonState(this.currentTrackId);
+                
+                // 波形を更新
+                this.updateTrackClipsWaveforms(this.currentTrackId);
             });
         }
         
@@ -157,6 +175,9 @@ class EffectsManager {
                 if (valueDisplay) {
                     valueDisplay.textContent = `${value.toFixed(1)} dB`;
                 }
+                
+                // 波形を更新
+                this.updateTrackClipsWaveforms(this.currentTrackId);
             });
         }
         
@@ -189,6 +210,9 @@ class EffectsManager {
                 if (valueDisplay) {
                     valueDisplay.textContent = `${value.toFixed(1)}:1`;
                 }
+                
+                // 波形を更新
+                this.updateTrackClipsWaveforms(this.currentTrackId);
             });
         }
         
@@ -470,6 +494,19 @@ class EffectsManager {
                 }
             });
         }
+    }
+    
+    // トラックの全クリップの波形を更新
+    updateTrackClipsWaveforms(trackId) {
+        if (!window.trackManager) return;
+        
+        const track = window.trackManager.getTrack(trackId);
+        if (!track) return;
+        
+        // トラックの全クリップの波形を再描画
+        track.clips.forEach(clip => {
+            window.trackManager.drawClipWaveform(trackId, clip.id);
+        });
     }
 }
 
