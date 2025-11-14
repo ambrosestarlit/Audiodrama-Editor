@@ -300,7 +300,7 @@ body {
 /* プレイヘッド（シークバー） */
 .playhead {
     position: absolute;
-    top: 50px; /* timeline-headerの高さ分 */
+    top: 0;
     bottom: 0;
     width: 2px;
     background: var(--color-danger);
