@@ -13,6 +13,23 @@ class VoiceDramaDAW {
         console.log('VoiceDrama DAW initializing...');
         
         try {
+            // 必要なマネージャーの存在確認
+            const requiredManagers = [
+                'audioEngine',
+                'projectManager', 
+                'fileManager',
+                'effectsManager',
+                'exportManager',
+                'trackManager',
+                'historyManager'
+            ];
+            
+            const missingManagers = requiredManagers.filter(manager => !window[manager]);
+            
+            if (missingManagers.length > 0) {
+                throw new Error(`必要なマネージャーが読み込まれていません: ${missingManagers.join(', ')}\n\nJavaScriptファイルが正しく読み込まれているか確認してください。`);
+            }
+            
             // 各マネージャーの初期化
             try {
                 console.log('Initializing projectManager...');
@@ -25,9 +42,6 @@ class VoiceDramaDAW {
             
             try {
                 console.log('Initializing fileManager...');
-                if (!window.fileManager) {
-                    throw new Error('fileManager not found');
-                }
                 window.fileManager.init();
                 console.log('✓ fileManager initialized');
             } catch (error) {
@@ -37,9 +51,6 @@ class VoiceDramaDAW {
             
             try {
                 console.log('Initializing effectsManager...');
-                if (!window.effectsManager) {
-                    throw new Error('effectsManager not found');
-                }
                 window.effectsManager.init();
                 console.log('✓ effectsManager initialized');
             } catch (error) {
@@ -49,9 +60,6 @@ class VoiceDramaDAW {
             
             try {
                 console.log('Initializing exportManager...');
-                if (!window.exportManager) {
-                    throw new Error('exportManager not found');
-                }
                 window.exportManager.init();
                 console.log('✓ exportManager initialized');
             } catch (error) {
@@ -73,7 +81,7 @@ class VoiceDramaDAW {
         } catch (error) {
             console.error('Initialization error:', error);
             console.error('Error stack:', error.stack);
-            alert(`アプリケーションの初期化に失敗しました\n\nエラー: ${error.message}\n\n詳細はコンソールを確認してください`);
+            alert(`アプリケーションの初期化に失敗しました\n\n${error.message}\n\n詳細はコンソールを確認してください`);
         }
     }
     
