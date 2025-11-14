@@ -310,7 +310,7 @@ class VoiceDramaDAW {
         // プレイヘッドを0に戻す
         const playhead = document.querySelector('.playhead');
         if (playhead) {
-            playhead.style.left = '200px'; // トラックヘッダー幅
+            playhead.style.left = '0px';
         }
     }
     
@@ -354,13 +354,13 @@ class VoiceDramaDAW {
         const existing = document.querySelector('.playhead');
         if (existing) return; // 既に存在する場合は何もしない
         
-        const timelineArea = document.getElementById('timelineArea');
-        if (!timelineArea) return;
+        const tracksContainer = document.getElementById('tracksContainer');
+        if (!tracksContainer) return;
         
         const playhead = document.createElement('div');
         playhead.className = 'playhead';
-        // CSSで left: 200px が設定されているので、ここでは設定不要
-        timelineArea.appendChild(playhead);
+        playhead.style.left = '0px'; // tracks-containerを基準に0からスタート
+        tracksContainer.appendChild(playhead);
     }
     
     // プレイヘッドを更新
@@ -368,8 +368,8 @@ class VoiceDramaDAW {
         const playhead = document.querySelector('.playhead');
         if (!playhead) return;
         
-        // CSSで既に200pxオフセットされているので、時間だけを掛ける
-        const leftPos = 200 + (window.audioEngine.currentTime * window.trackManager.pixelsPerSecond);
+        // tracks-containerを基準にするので、200pxのオフセット不要
+        const leftPos = window.audioEngine.currentTime * window.trackManager.pixelsPerSecond;
         playhead.style.left = `${leftPos}px`;
     }
     
