@@ -370,8 +370,9 @@ class AudioEngine {
         
         const presets = {
             flat: { low: 0, mid: 0, high: 0 },
-            phone: { low: -8, mid: 4, high: -6 }, // 電話風（中域強調、低域と高域カット）
-            radio: { low: -3, mid: 2, high: 1 }   // ラジオ風（軽く中高域強調）
+            phone: { low: -24, mid: 24, high: -24 }, // 電話風（中域のみ、低域と高域完全カット）
+            clear: { low: -10, mid: 3, high: 11 },   // クリア（こもりを解消）
+            wall: { low: 24, mid: -24, high: -24 }   // 壁越し（低域のみ、中高域カット）
         };
         
         const values = presets[preset];
