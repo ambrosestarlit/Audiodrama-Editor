@@ -127,19 +127,72 @@ class ExportManager {
         window.trackManager.tracks.forEach(track => {
             if (track.mute) return;
             
+            // トラックの基本ゲイン
             const trackGain = offlineContext.createGain();
             trackGain.gain.value = track.volume;
-            trackGain.connect(offlineLimiter);
+            
+            // トラックのオーディオトラック情報を取得
+            const audioTrack = window.audioEngine.getTrack(track.id);
+            
+            // トラックエフェクトチェーンを構築
+            let trackOutput = trackGain;
+            
+            // EQを適用
+            if (audioTrack && audioTrack.eqEnabled && audioTrack.eq) {
+                const lowShelf = offlineContext.createBiquadFilter();
+                lowShelf.type = 'lowshelf';
+                lowShelf.frequency.value = 200;
+                lowShelf.gain.value = audioTrack.eq.low.gain.value;
+                
+                const peaking = offlineContext.createBiquadFilter();
+                peaking.type = 'peaking';
+                peaking.frequency.value = 1000;
+                peaking.Q.value = 1;
+                peaking.gain.value = audioTrack.eq.mid.gain.value;
+                
+                const highShelf = offlineContext.createBiquadFilter();
+                highShelf.type = 'highshelf';
+                highShelf.frequency.value = 3000;
+                highShelf.gain.value = audioTrack.eq.high.gain.value;
+                
+                // EQチェーンを接続
+                trackGain.connect(lowShelf);
+                lowShelf.connect(peaking);
+                peaking.connect(highShelf);
+                trackOutput = highShelf;
+            }
+            
+            // トラックリミッターを適用
+            if (audioTrack && audioTrack.limiterEnabled && audioTrack.limiter) {
+                const trackLimiter = offlineContext.createDynamicsCompressor();
+                trackLimiter.threshold.value = audioTrack.limiter.threshold.value;
+                trackLimiter.knee.value = 0;
+                trackLimiter.ratio.value = audioTrack.limiter.ratio.value;
+                trackLimiter.attack.value = 0.003;
+                trackLimiter.release.value = audioTrack.limiter.release.value;
+                
+                trackOutput.connect(trackLimiter);
+                trackOutput = trackLimiter;
+            }
+            
+            // マスターリミッターに接続
+            trackOutput.connect(offlineLimiter);
             
             track.clips.forEach(clip => {
                 const source = offlineContext.createBufferSource();
                 
-                // オーディオファイル取得（同期的に取得できる想定）
+                // オーディオファイル取得
                 const audioFile = window.fileManager.getAllFiles().find(f => f.id === clip.fileId);
                 if (!audioFile) return;
                 
+                // クリップゲインを適用
+                const clipGain = offlineContext.createGain();
+                const clipGainDb = clip.gain || 0;
+                clipGain.gain.value = Math.pow(10, clipGainDb / 20);
+                
                 source.buffer = audioFile.audioBuffer;
-                source.connect(trackGain);
+                source.connect(clipGain);
+                clipGain.connect(trackGain);
                 source.start(clip.startTime, clip.offset, clip.duration);
             });
         });
