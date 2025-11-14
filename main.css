@@ -6,6 +6,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: 'BananaSlip', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', Meiryo, sans-serif;
 }
 
 body {
@@ -45,7 +46,7 @@ body {
 .app-title {
     font-size: 22px;
     color: var(--color-primary);
-    font-weight: 700;
+    font-weight: normal;
     margin: 0;
 }
 
@@ -165,7 +166,7 @@ body {
 
 .file-item-name {
     font-size: 13px;
-    font-weight: 500;
+    font-weight: normal;
     color: var(--color-text-primary);
     white-space: nowrap;
     overflow: hidden;
@@ -255,7 +256,7 @@ body {
     border-radius: var(--radius-medium);
     font-family: 'Courier New', monospace;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: normal;
     color: var(--color-text-primary);
     display: flex;
     gap: var(--spacing-sm);
@@ -287,7 +288,7 @@ body {
 .track-header-column {
     width: 200px;
     padding: var(--spacing-md);
-    font-weight: 600;
+    font-weight: normal;
     color: var(--color-primary);
     background: var(--color-bg-secondary);
     border-right: 2px solid var(--color-border-light);
@@ -399,7 +400,7 @@ body {
 
 .track-name {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: normal;
     color: var(--color-text-primary);
     background: transparent;
     border: 1px solid var(--color-border-light);
@@ -505,7 +506,7 @@ body {
     position: relative;
     z-index: 2;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: normal;
     color: var(--color-text-primary);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 8px rgba(255, 255, 255, 0.5);
     pointer-events: none;
@@ -549,7 +550,7 @@ body {
 .track-count {
     font-size: 13px;
     color: var(--color-text-secondary);
-    font-weight: 500;
+    font-weight: normal;
 }
 
 /* ==========================================
@@ -603,7 +604,7 @@ body {
     font-size: 14px;
     color: var(--color-primary);
     margin: 0 0 var(--spacing-md) 0;
-    font-weight: 600;
+    font-weight: normal;
 }
 
 .eq-controls,
@@ -665,12 +666,12 @@ body {
 
 .info-row span:first-child {
     color: var(--color-text-secondary);
-    font-weight: 500;
+    font-weight: normal;
 }
 
 .info-value {
     font-family: 'Courier New', monospace;
-    font-weight: 700;
+    font-weight: normal;
     color: var(--color-primary);
 }
 
@@ -717,7 +718,7 @@ body {
 }
 
 .gain-slider-container label {
-    font-weight: 600;
+    font-weight: normal;
     font-size: 14px;
     color: var(--color-text-secondary);
 }
@@ -729,7 +730,7 @@ body {
 .gain-value {
     text-align: center;
     font-size: 20px;
-    font-weight: 700;
+    font-weight: normal;
     font-family: 'Courier New', monospace;
     color: var(--color-primary);
 }
@@ -764,7 +765,7 @@ body {
 .eq-band label,
 .control-row label {
     font-size: 12px;
-    font-weight: 600;
+    font-weight: normal;
     color: var(--color-text-secondary);
 }
 
@@ -814,7 +815,7 @@ body {
 
 .project-item-name {
     font-size: 15px;
-    font-weight: 600;
+    font-weight: normal;
     color: var(--color-text-primary);
     margin-bottom: var(--spacing-xs);
 }
@@ -850,7 +851,7 @@ body {
 
 .option-group label {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: normal;
     color: var(--color-text-primary);
 }
 
