@@ -196,7 +196,7 @@ class TrackManager {
     }
     
     // クリップをレンダリング
-    renderClip(trackId, clip) {
+    async renderClip(trackId, clip) {
         const trackContent = document.querySelector(`.track-content[data-track-id="${trackId}"]`);
         if (!trackContent) return;
         
@@ -212,6 +212,7 @@ class TrackManager {
         clipElement.style.width = `${width}px`;
         
         clipElement.innerHTML = `
+            <div class="clip-waveform" data-clip-id="${clip.id}" data-track-id="${trackId}"></div>
             <div class="clip-name">${clip.name}</div>
             <div class="clip-resize-handle left"></div>
             <div class="clip-resize-handle right"></div>
@@ -221,6 +222,9 @@ class TrackManager {
         
         // イベントリスナー設定
         this.setupClipEvents(clipElement, trackId, clip);
+        
+        // 波形を描画
+        this.drawClipWaveform(trackId, clip.id);
     }
     
     // クリップイベント設定
@@ -518,8 +522,85 @@ class TrackManager {
         // ピーク情報を更新
         this.updateClipGainInfo(trackId, clipId);
         
-        // 素材パネルの波形も更新
-        window.fileManager.updateFileWaveform(clip.fileId, gainDb);
+        // タイムライン上の波形を更新
+        this.drawClipWaveform(trackId, clipId);
+    }
+    
+    // クリップの波形を描画
+    async drawClipWaveform(trackId, clipId) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        const clip = track.clips.find(c => c.id === clipId);
+        if (!clip) return;
+        
+        const waveformContainer = document.querySelector(`.clip-waveform[data-clip-id="${clipId}"][data-track-id="${trackId}"]`);
+        if (!waveformContainer) return;
+        
+        // オーディオファイルを取得
+        const audioFile = await window.fileManager.getAudioFile(clip.fileId);
+        if (!audioFile || !audioFile.audioBuffer) return;
+        
+        // 既存のcanvasを削除
+        const existingCanvas = waveformContainer.querySelector('canvas');
+        if (existingCanvas) {
+            existingCanvas.remove();
+        }
+        
+        const canvas = document.createElement('canvas');
+        const clipElement = waveformContainer.closest('.track-clip');
+        const rect = clipElement.getBoundingClientRect();
+        canvas.width = rect.width * 2; // Retina対応
+        canvas.height = rect.height * 2;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        waveformContainer.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // 波形データを取得
+        const audioBuffer = audioFile.audioBuffer;
+        const rawData = audioBuffer.getChannelData(0);
+        const samples = Math.floor(width / 2);
+        const blockSize = Math.floor(rawData.length / samples);
+        const filteredData = [];
+        
+        // ゲイン適用
+        const gainDb = clip.gain || 0;
+        const gainLinear = Math.pow(10, gainDb / 20);
+        
+        // ピークを抽出
+        for (let i = 0; i < samples; i++) {
+            let blockStart = blockSize * i;
+            let max = 0;
+            for (let j = 0; j < blockSize; j++) {
+                const val = Math.abs(rawData[blockStart + j] || 0) * gainLinear;
+                if (val > max) max = val;
+            }
+            filteredData.push(max);
+        }
+        
+        // 背景をクリア
+        ctx.clearRect(0, 0, width, height);
+        
+        // 波形を描画
+        const middle = height / 2;
+        const barWidth = width / samples;
+        
+        for (let i = 0; i < samples; i++) {
+            const value = filteredData[i];
+            const barHeight = value * middle * 0.85;
+            const x = i * barWidth;
+            
+            // クリッピング検出
+            const isClipping = value > 1.0;
+            ctx.fillStyle = isClipping ? 'rgba(214, 115, 115, 0.8)' : 'rgba(139, 111, 71, 0.6)';
+            
+            // 上下対称に描画
+            ctx.fillRect(x, middle - barHeight, barWidth - 0.5, barHeight * 2);
+        }
     }
     
     // 全トラッククリア
