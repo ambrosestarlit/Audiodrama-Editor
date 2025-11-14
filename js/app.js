@@ -217,10 +217,14 @@ class VoiceDramaDAW {
         }
         
         // エフェクトをリセット
-        window.effectsManager.resetAllEffects();
+        if (window.effectsManager && window.effectsManager.resetAllEffects) {
+            window.effectsManager.resetAllEffects();
+        }
         
         // 初期トラック追加
-        window.trackManager.addTrack('メイントラック');
+        if (window.trackManager) {
+            window.trackManager.addTrack('メイントラック');
+        }
     }
     
     // プロジェクト保存
