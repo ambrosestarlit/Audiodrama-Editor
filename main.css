@@ -154,15 +154,16 @@ body {
 }
 
 .file-item {
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-md);
     background: var(--color-bg-secondary);
     border-radius: var(--radius-medium);
     cursor: grab;
     transition: all var(--transition-fast);
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-md);
     border: 2px solid transparent;
+    min-height: 80px; /* トラックの高さに合わせる */
 }
 
 .file-item:hover {
