@@ -153,17 +153,17 @@ class EffectsManager {
             });
         });
         
-        // ノイズゲート有効化チェックボックス
-        const noiseGateEnabledCheckbox = document.getElementById('trackNoiseGateEnabled');
-        if (noiseGateEnabledCheckbox) {
-            noiseGateEnabledCheckbox.addEventListener('change', (e) => {
+        // ノイズリダクション有効化チェックボックス
+        const noiseReductionEnabledCheckbox = document.getElementById('trackNoiseReductionEnabled');
+        if (noiseReductionEnabledCheckbox) {
+            noiseReductionEnabledCheckbox.addEventListener('change', (e) => {
                 if (this.currentTrackId === null) return;
                 
                 const enabled = e.target.checked;
-                window.audioEngine.setTrackNoiseGateEnabled(this.currentTrackId, enabled);
+                window.audioEngine.setTrackNoiseReductionEnabled(this.currentTrackId, enabled);
                 
                 // スライダーの有効/無効を切り替え
-                const sliders = ['trackNoiseGateThreshold', 'trackNoiseGateAttack', 'trackNoiseGateRelease'];
+                const sliders = ['trackNoiseReductionCutoff', 'trackNoiseReductionResonance'];
                 sliders.forEach(id => {
                     const slider = document.getElementById(id);
                     if (slider) slider.disabled = !enabled;
@@ -174,50 +174,34 @@ class EffectsManager {
             });
         }
         
-        // ノイズゲート - Threshold
-        const noiseGateThreshold = document.getElementById('trackNoiseGateThreshold');
-        if (noiseGateThreshold) {
-            noiseGateThreshold.addEventListener('input', (e) => {
+        // ノイズリダクション - Cutoff
+        const noiseReductionCutoff = document.getElementById('trackNoiseReductionCutoff');
+        if (noiseReductionCutoff) {
+            noiseReductionCutoff.addEventListener('input', (e) => {
                 if (this.currentTrackId === null) return;
                 
                 const value = parseFloat(e.target.value);
-                window.audioEngine.setTrackNoiseGate(this.currentTrackId, 'threshold', value);
+                window.audioEngine.setTrackNoiseReduction(this.currentTrackId, 'cutoff', value);
                 
                 const valueDisplay = e.target.nextElementSibling;
                 if (valueDisplay) {
-                    valueDisplay.textContent = `${value.toFixed(0)} dB`;
+                    valueDisplay.textContent = `${value.toFixed(0)} Hz`;
                 }
             });
         }
         
-        // ノイズゲート - Attack
-        const noiseGateAttack = document.getElementById('trackNoiseGateAttack');
-        if (noiseGateAttack) {
-            noiseGateAttack.addEventListener('input', (e) => {
+        // ノイズリダクション - Resonance
+        const noiseReductionResonance = document.getElementById('trackNoiseReductionResonance');
+        if (noiseReductionResonance) {
+            noiseReductionResonance.addEventListener('input', (e) => {
                 if (this.currentTrackId === null) return;
                 
                 const value = parseFloat(e.target.value);
-                window.audioEngine.setTrackNoiseGate(this.currentTrackId, 'attack', value);
+                window.audioEngine.setTrackNoiseReduction(this.currentTrackId, 'resonance', value);
                 
                 const valueDisplay = e.target.nextElementSibling;
                 if (valueDisplay) {
-                    valueDisplay.textContent = `${value.toFixed(0)} ms`;
-                }
-            });
-        }
-        
-        // ノイズゲート - Release
-        const noiseGateRelease = document.getElementById('trackNoiseGateRelease');
-        if (noiseGateRelease) {
-            noiseGateRelease.addEventListener('input', (e) => {
-                if (this.currentTrackId === null) return;
-                
-                const value = parseFloat(e.target.value);
-                window.audioEngine.setTrackNoiseGate(this.currentTrackId, 'release', value);
-                
-                const valueDisplay = e.target.nextElementSibling;
-                if (valueDisplay) {
-                    valueDisplay.textContent = `${value.toFixed(0)} ms`;
+                    valueDisplay.textContent = value.toFixed(1);
                 }
             });
         }
@@ -351,45 +335,33 @@ class EffectsManager {
             btn.disabled = !track.eqEnabled;
         });
         
-        // ノイズゲート有効化チェックボックス
-        const noiseGateEnabledCheckbox = document.getElementById('trackNoiseGateEnabled');
-        if (noiseGateEnabledCheckbox) {
-            noiseGateEnabledCheckbox.checked = track.noiseGateEnabled || false;
+        // ノイズリダクション有効化チェックボックス
+        const noiseReductionEnabledCheckbox = document.getElementById('trackNoiseReductionEnabled');
+        if (noiseReductionEnabledCheckbox) {
+            noiseReductionEnabledCheckbox.checked = track.noiseReductionEnabled || false;
         }
         
-        // ノイズゲート - Threshold
-        const noiseGateThreshold = document.getElementById('trackNoiseGateThreshold');
-        if (noiseGateThreshold) {
-            const value = track.noiseGate.threshold.value;
-            noiseGateThreshold.value = value;
-            noiseGateThreshold.disabled = !track.noiseGateEnabled;
-            const valueDisplay = noiseGateThreshold.nextElementSibling;
+        // ノイズリダクション - Cutoff
+        const noiseReductionCutoff = document.getElementById('trackNoiseReductionCutoff');
+        if (noiseReductionCutoff) {
+            const value = track.noiseReduction.cutoffFreq;
+            noiseReductionCutoff.value = value;
+            noiseReductionCutoff.disabled = !track.noiseReductionEnabled;
+            const valueDisplay = noiseReductionCutoff.nextElementSibling;
             if (valueDisplay) {
-                valueDisplay.textContent = `${value.toFixed(0)} dB`;
+                valueDisplay.textContent = `${value.toFixed(0)} Hz`;
             }
         }
         
-        // ノイズゲート - Attack
-        const noiseGateAttack = document.getElementById('trackNoiseGateAttack');
-        if (noiseGateAttack) {
-            const value = track.noiseGate.attack.value * 1000; // sからmsへ
-            noiseGateAttack.value = value;
-            noiseGateAttack.disabled = !track.noiseGateEnabled;
-            const valueDisplay = noiseGateAttack.nextElementSibling;
+        // ノイズリダクション - Resonance
+        const noiseReductionResonance = document.getElementById('trackNoiseReductionResonance');
+        if (noiseReductionResonance) {
+            const value = track.noiseReduction.resonance;
+            noiseReductionResonance.value = value;
+            noiseReductionResonance.disabled = !track.noiseReductionEnabled;
+            const valueDisplay = noiseReductionResonance.nextElementSibling;
             if (valueDisplay) {
-                valueDisplay.textContent = `${value.toFixed(0)} ms`;
-            }
-        }
-        
-        // ノイズゲート - Release
-        const noiseGateReleaseSlider = document.getElementById('trackNoiseGateRelease');
-        if (noiseGateReleaseSlider) {
-            const value = track.noiseGate.release.value * 1000; // sからmsへ
-            noiseGateReleaseSlider.value = value;
-            noiseGateReleaseSlider.disabled = !track.noiseGateEnabled;
-            const valueDisplay = noiseGateReleaseSlider.nextElementSibling;
-            if (valueDisplay) {
-                valueDisplay.textContent = `${value.toFixed(0)} ms`;
+                valueDisplay.textContent = value.toFixed(1);
             }
         }
         
@@ -445,7 +417,7 @@ class EffectsManager {
         if (!fxButton) return;
         
         // EQ、ノイズゲート、またはリミッターが有効ならアクティブ状態にする
-        const hasEffects = track.eqEnabled || track.noiseGateEnabled || track.limiterEnabled;
+        const hasEffects = track.eqEnabled || track.noiseReductionEnabled || track.limiterEnabled;
         
         if (hasEffects) {
             fxButton.classList.add('active');

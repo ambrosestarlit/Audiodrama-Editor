@@ -137,17 +137,15 @@ class ExportManager {
             // トラックエフェクトチェーンを構築
             let trackOutput = trackGain;
             
-            // ノイズゲートを適用
-            if (audioTrack && audioTrack.noiseGateEnabled && audioTrack.noiseGate) {
-                const noiseGate = offlineContext.createDynamicsCompressor();
-                noiseGate.threshold.value = audioTrack.noiseGate.threshold.value;
-                noiseGate.knee.value = 0;
-                noiseGate.ratio.value = 20;
-                noiseGate.attack.value = audioTrack.noiseGate.attack.value;
-                noiseGate.release.value = audioTrack.noiseGate.release.value;
+            // ノイズリダクションを適用
+            if (audioTrack && audioTrack.noiseReductionEnabled && audioTrack.noiseReduction) {
+                const highpass = offlineContext.createBiquadFilter();
+                highpass.type = 'highpass';
+                highpass.frequency.value = audioTrack.noiseReduction.cutoffFreq;
+                highpass.Q.value = audioTrack.noiseReduction.resonance;
                 
-                trackGain.connect(noiseGate);
-                trackOutput = noiseGate;
+                trackOutput.connect(highpass);
+                trackOutput = highpass;
             }
             
             // EQを適用

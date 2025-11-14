@@ -131,7 +131,11 @@ class AudioEngine {
             gain: this.audioContext.createGain(),
             pan: this.audioContext.createStereoPanner(),
             limiter: this.audioContext.createDynamicsCompressor(),
-            noiseGate: this.audioContext.createDynamicsCompressor(),
+            noiseReduction: {
+                highpass: this.audioContext.createBiquadFilter(),
+                cutoffFreq: 80,
+                resonance: 0.7
+            },
             eq: {
                 low: this.audioContext.createBiquadFilter(),
                 mid: this.audioContext.createBiquadFilter(),
@@ -143,7 +147,7 @@ class AudioEngine {
             clips: [],
             limiterEnabled: false,
             eqEnabled: false,
-            noiseGateEnabled: false
+            noiseReductionEnabled: false
         };
         
         track.gain.gain.value = track.volume;
@@ -155,12 +159,10 @@ class AudioEngine {
         track.limiter.attack.value = 0.003;
         track.limiter.release.value = 0.25;
         
-        // ノイズゲート設定（Expander風）
-        track.noiseGate.threshold.value = -50;  // -50dB以下をカット
-        track.noiseGate.knee.value = 0;
-        track.noiseGate.ratio.value = 20;       // 高いレシオでゲート効果
-        track.noiseGate.attack.value = 0.003;   // 速いアタック
-        track.noiseGate.release.value = 0.1;    // やや遅めのリリース
+        // ノイズリダクション設定（ハイパスフィルター）
+        track.noiseReduction.highpass.type = 'highpass';
+        track.noiseReduction.highpass.frequency.value = track.noiseReduction.cutoffFreq;
+        track.noiseReduction.highpass.Q.value = track.noiseReduction.resonance;
         
         // イコライザー設定
         track.eq.low.type = 'lowshelf';
@@ -176,9 +178,9 @@ class AudioEngine {
         track.eq.high.frequency.value = 10000;
         track.eq.high.gain.value = 0;
         
-        // 接続: Track Gain -> Noise Gate -> Pan -> (EQ) -> (Limiter) -> Master EQ
-        track.gain.connect(track.noiseGate);
-        track.noiseGate.connect(track.pan);
+        // 接続: Track Gain -> Noise Reduction -> Pan -> (EQ) -> (Limiter) -> Master EQ
+        track.gain.connect(track.noiseReduction.highpass);
+        track.noiseReduction.highpass.connect(track.pan);
         // 初期状態ではEQをバイパス
         track.pan.connect(this.eq.low);
         
@@ -395,41 +397,40 @@ class AudioEngine {
         }
     }
     
-    // ノイズゲート有効化/無効化
-    setTrackNoiseGateEnabled(trackId, enabled) {
+    // ノイズリダクション有効化/無効化
+    setTrackNoiseReductionEnabled(trackId, enabled) {
         const track = this.getTrack(trackId);
         if (!track) return;
         
-        track.noiseGateEnabled = enabled;
+        track.noiseReductionEnabled = enabled;
         
         // 接続を再構築
         track.gain.disconnect();
-        track.noiseGate.disconnect();
+        track.noiseReduction.highpass.disconnect();
         
         if (enabled) {
-            // Gain -> NoiseGate -> Pan
-            track.gain.connect(track.noiseGate);
-            track.noiseGate.connect(track.pan);
+            // Gain -> NoiseReduction -> Pan
+            track.gain.connect(track.noiseReduction.highpass);
+            track.noiseReduction.highpass.connect(track.pan);
         } else {
-            // Gain -> Pan (ノイズゲートをバイパス)
+            // Gain -> Pan (バイパス)
             track.gain.connect(track.pan);
         }
     }
     
-    // ノイズゲート設定変更
-    setTrackNoiseGate(trackId, param, value) {
+    // ノイズリダクション設定変更
+    setTrackNoiseReduction(trackId, param, value) {
         const track = this.getTrack(trackId);
-        if (!track || !track.noiseGate) return;
+        if (!track || !track.noiseReduction) return;
         
         switch(param) {
-            case 'threshold':
-                track.noiseGate.threshold.value = value;
+            case 'cutoff':
+                track.noiseReduction.cutoffFreq = value;
+                track.noiseReduction.highpass.frequency.value = value;
                 break;
-            case 'attack':
-                track.noiseGate.attack.value = value / 1000; // msをsに変換
-                break;
-            case 'release':
-                track.noiseGate.release.value = value / 1000; // msをsに変換
+            case 'resonance':
+                track.noiseReduction.resonance = value;
+                track.noiseReduction.highpass.Q.value = value;
                 break;
         }
     }

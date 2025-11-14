@@ -143,28 +143,23 @@
                         </div>
                     </div>
                     <div class="effect-section">
-                        <h3>ノイズゲート</h3>
-                        <div class="noisegate-controls">
+                        <h3>ノイズリダクション</h3>
+                        <div class="noisereduction-controls">
                             <div class="control-row">
                                 <label class="checkbox-label">
-                                    <input type="checkbox" id="trackNoiseGateEnabled">
-                                    <span>ノイズゲートを有効化</span>
+                                    <input type="checkbox" id="trackNoiseReductionEnabled">
+                                    <span>ノイズリダクションを有効化</span>
                                 </label>
                             </div>
                             <div class="control-row">
-                                <label>Threshold</label>
-                                <input type="range" id="trackNoiseGateThreshold" min="-60" max="-20" value="-50" step="1" disabled>
-                                <span class="control-value">-50 dB</span>
+                                <label>カットオフ周波数</label>
+                                <input type="range" id="trackNoiseReductionCutoff" min="20" max="200" value="80" step="5" disabled>
+                                <span class="control-value">80 Hz</span>
                             </div>
                             <div class="control-row">
-                                <label>Attack</label>
-                                <input type="range" id="trackNoiseGateAttack" min="1" max="50" value="3" step="1" disabled>
-                                <span class="control-value">3 ms</span>
-                            </div>
-                            <div class="control-row">
-                                <label>Release</label>
-                                <input type="range" id="trackNoiseGateRelease" min="50" max="500" value="100" step="10" disabled>
-                                <span class="control-value">100 ms</span>
+                                <label>強度</label>
+                                <input type="range" id="trackNoiseReductionResonance" min="0.1" max="2" value="0.7" step="0.1" disabled>
+                                <span class="control-value">0.7</span>
                             </div>
                         </div>
                     </div>
