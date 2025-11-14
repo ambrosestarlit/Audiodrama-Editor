@@ -310,7 +310,9 @@ class VoiceDramaDAW {
         // プレイヘッドを0に戻す
         const playhead = document.querySelector('.playhead');
         if (playhead) {
-            playhead.style.left = '0px';
+            const trackHeader = document.querySelector('.track-header');
+            const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+            playhead.style.left = `${headerWidth}px`;
         }
     }
     
@@ -357,9 +359,13 @@ class VoiceDramaDAW {
         const tracksContainer = document.getElementById('tracksContainer');
         if (!tracksContainer) return;
         
+        // track-headerの実際の幅を取得
+        const trackHeader = document.querySelector('.track-header');
+        const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+        
         const playhead = document.createElement('div');
         playhead.className = 'playhead';
-        playhead.style.left = '0px'; // tracks-containerを基準に0からスタート
+        playhead.style.left = `${headerWidth}px`;
         tracksContainer.appendChild(playhead);
     }
     
@@ -368,8 +374,11 @@ class VoiceDramaDAW {
         const playhead = document.querySelector('.playhead');
         if (!playhead) return;
         
-        // tracks-containerを基準にするので、200pxのオフセット不要
-        const leftPos = window.audioEngine.currentTime * window.trackManager.pixelsPerSecond;
+        // track-headerの実際の幅を取得
+        const trackHeader = document.querySelector('.track-header');
+        const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+        
+        const leftPos = headerWidth + (window.audioEngine.currentTime * window.trackManager.pixelsPerSecond);
         playhead.style.left = `${leftPos}px`;
     }
     
