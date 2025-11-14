@@ -305,7 +305,14 @@ class AudioEngine {
         // 再生開始位置とオフセットを計算
         const offset = clip.offset + Math.max(0, playbackStartTime - clipStartTime);
         const duration = clipEndTime - Math.max(playbackStartTime, clipStartTime);
-        const when = contextStartTime + Math.max(0, clipStartTime - playbackStartTime);
+        
+        // 0秒から再生する場合は即座に開始（AudioContext.currentTimeを使用）
+        let when;
+        if (playbackStartTime === 0 && clipStartTime === 0) {
+            when = this.audioContext.currentTime; // 即座に開始
+        } else {
+            when = contextStartTime + Math.max(0, clipStartTime - playbackStartTime);
+        }
         
         source.start(when, offset, duration);
         

@@ -314,6 +314,10 @@ class VoiceDramaDAW {
         this.isPlaying = false;
         window.audioEngine.stop();
         this.stopTimeUpdate();
+        
+        // currentTimeを0にリセット
+        window.audioEngine.currentTime = 0;
+        
         this.updateTimeDisplay();
         
         // プレイヘッドを0に戻す
