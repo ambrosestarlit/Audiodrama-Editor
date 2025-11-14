@@ -230,6 +230,12 @@ class TrackManager {
             this.selectClip(trackId, clip.id);
         });
         
+        // ダブルクリックでエフェクトパネルを開く
+        clipElement.addEventListener('dblclick', (e) => {
+            if (e.target.classList.contains('clip-resize-handle')) return;
+            window.effectsManager.openTrackEffects(trackId, clip.id);
+        });
+        
         // ドラッグ移動
         clipElement.addEventListener('mousedown', (e) => {
             if (e.target.classList.contains('clip-resize-handle')) return;
