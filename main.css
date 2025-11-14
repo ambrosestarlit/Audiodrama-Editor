@@ -484,7 +484,7 @@ body {
 
 .track-clip {
     position: absolute;
-    height: 70px;
+    height: calc(100% - 10px); /* トラックいっぱいに */
     top: 5px;
     background: var(--color-accent-light);
     border: 2px solid var(--color-accent);
