@@ -19,8 +19,12 @@
                 </div>
             </div>
             <div class="header-controls">
-                <button class="btn btn-secondary" id="undoBtn" disabled title="元に戻す (Ctrl/Cmd+Z)">↶</button>
-                <button class="btn btn-secondary" id="redoBtn" disabled title="やり直す (Ctrl/Cmd+Y)">↷</button>
+                <button class="btn btn-secondary history-btn" id="undoBtn" disabled title="元に戻す (Ctrl/Cmd+Z)">
+                    <img src="undo.png" alt="元に戻す" class="history-icon">
+                </button>
+                <button class="btn btn-secondary history-btn" id="redoBtn" disabled title="やり直す (Ctrl/Cmd+Y)">
+                    <img src="redo.png" alt="やり直す" class="history-icon">
+                </button>
                 <button class="btn btn-primary" id="newProjectBtn">新規</button>
                 <button class="btn btn-primary" id="saveProjectBtn">保存</button>
                 <button class="btn btn-primary" id="loadProjectBtn">読込</button>
