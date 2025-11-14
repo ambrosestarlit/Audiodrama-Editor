@@ -97,42 +97,28 @@
                 </div>
                 <div class="effects-content">
                     <div class="effect-section">
-                        <h3>イコライザー</h3>
-                        <div class="eq-controls">
-                            <div class="eq-band">
-                                <label>Low (100Hz)</label>
-                                <input type="range" class="eq-slider" id="eqLow" min="-12" max="12" value="0" step="0.1">
-                                <span class="eq-value">0 dB</span>
-                            </div>
-                            <div class="eq-band">
-                                <label>Mid (1kHz)</label>
-                                <input type="range" class="eq-slider" id="eqMid" min="-12" max="12" value="0" step="0.1">
-                                <span class="eq-value">0 dB</span>
-                            </div>
-                            <div class="eq-band">
-                                <label>High (10kHz)</label>
-                                <input type="range" class="eq-slider" id="eqHigh" min="-12" max="12" value="0" step="0.1">
-                                <span class="eq-value">0 dB</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="effect-section">
-                        <h3>リミッター (W1 Style)</h3>
+                        <h3>トラックリミッター</h3>
                         <div class="limiter-controls">
                             <div class="control-row">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="trackLimiterEnabled">
+                                    <span>リミッターを有効化</span>
+                                </label>
+                            </div>
+                            <div class="control-row">
                                 <label>Threshold</label>
-                                <input type="range" id="limiterThreshold" min="-24" max="0" value="-6" step="0.1">
+                                <input type="range" id="trackLimiterThreshold" min="-24" max="0" value="-6" step="0.1">
                                 <span class="control-value">-6 dB</span>
                             </div>
                             <div class="control-row">
                                 <label>Release</label>
-                                <input type="range" id="limiterRelease" min="10" max="1000" value="250" step="10">
+                                <input type="range" id="trackLimiterRelease" min="10" max="1000" value="250" step="10">
                                 <span class="control-value">250 ms</span>
                             </div>
                             <div class="control-row">
-                                <label>Output Ceiling</label>
-                                <input type="range" id="limiterCeiling" min="-6" max="0" value="-0.1" step="0.1">
-                                <span class="control-value">-0.1 dB</span>
+                                <label>Ratio</label>
+                                <input type="range" id="trackLimiterRatio" min="1" max="20" value="20" step="0.1">
+                                <span class="control-value">20:1</span>
                             </div>
                         </div>
                     </div>
