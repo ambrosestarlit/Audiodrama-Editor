@@ -404,6 +404,13 @@ class AudioEngine {
         
         track.noiseReductionEnabled = enabled;
         
+        console.log('🎛️ Noise Reduction:', {
+            trackId: trackId,
+            enabled: enabled,
+            currentFreq: track.noiseReduction.highpass.frequency.value,
+            targetFreq: enabled ? track.noiseReduction.cutoffFreq : 20
+        });
+        
         if (enabled) {
             // 有効化: 設定されたカットオフ周波数に
             track.noiseReduction.highpass.frequency.value = track.noiseReduction.cutoffFreq;
@@ -411,6 +418,12 @@ class AudioEngine {
             // 無効化: 20Hzに下げてほぼバイパス
             track.noiseReduction.highpass.frequency.value = 20;
         }
+        
+        console.log('🔊 After change:', {
+            frequency: track.noiseReduction.highpass.frequency.value,
+            Q: track.noiseReduction.highpass.Q.value,
+            type: track.noiseReduction.highpass.type
+        });
     }
     
     // ノイズリダクション設定変更
@@ -418,16 +431,29 @@ class AudioEngine {
         const track = this.getTrack(trackId);
         if (!track || !track.noiseReduction) return;
         
+        console.log('🔧 Noise Reduction Parameter Change:', {
+            trackId: trackId,
+            param: param,
+            value: value
+        });
+        
         switch(param) {
             case 'cutoff':
                 track.noiseReduction.cutoffFreq = value;
-                track.noiseReduction.highpass.frequency.value = value;
+                if (track.noiseReductionEnabled) {
+                    track.noiseReduction.highpass.frequency.value = value;
+                }
                 break;
             case 'resonance':
                 track.noiseReduction.resonance = value;
                 track.noiseReduction.highpass.Q.value = value;
                 break;
         }
+        
+        console.log('🔊 Current filter state:', {
+            frequency: track.noiseReduction.highpass.frequency.value,
+            Q: track.noiseReduction.highpass.Q.value
+        });
     }
     
     // 再生
