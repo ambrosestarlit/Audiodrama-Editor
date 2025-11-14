@@ -17,8 +17,16 @@ class FileManager {
     
     // 初期化
     init() {
-        this.setupEventListeners();
-        this.loadSavedFiles();
+        try {
+            console.log('FileManager: Setting up event listeners...');
+            this.setupEventListeners();
+            console.log('FileManager: Loading saved files...');
+            this.loadSavedFiles();
+            console.log('FileManager: Initialized successfully');
+        } catch (error) {
+            console.error('FileManager initialization error:', error);
+            throw error;
+        }
     }
     
     // イベントリスナー設定

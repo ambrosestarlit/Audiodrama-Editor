@@ -10,7 +10,14 @@ class EffectsManager {
     
     // 初期化
     init() {
-        this.setupEventListeners();
+        try {
+            console.log('EffectsManager: Setting up event listeners...');
+            this.setupEventListeners();
+            console.log('EffectsManager: Initialized successfully');
+        } catch (error) {
+            console.error('EffectsManager initialization error:', error);
+            throw error;
+        }
     }
     
     // イベントリスナー設定
@@ -228,8 +235,7 @@ class EffectsManager {
         const closeBtn = document.getElementById('closeEffectsBtn');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                this.togglePanel();
-                this.currentTrackId = null;
+                this.closePanel();
             });
         }
     }

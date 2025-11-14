@@ -9,7 +9,14 @@ class ExportManager {
     
     // 初期化
     init() {
-        this.setupEventListeners();
+        try {
+            console.log('ExportManager: Setting up event listeners...');
+            this.setupEventListeners();
+            console.log('ExportManager: Initialized successfully');
+        } catch (error) {
+            console.error('ExportManager initialization error:', error);
+            throw error;
+        }
     }
     
     // イベントリスナー設定

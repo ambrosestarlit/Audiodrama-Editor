@@ -14,21 +14,66 @@ class VoiceDramaDAW {
         
         try {
             // 各マネージャーの初期化
-            await window.projectManager.init();
-            window.fileManager.init();
-            window.effectsManager.init();
-            window.exportManager.init();
+            try {
+                console.log('Initializing projectManager...');
+                await window.projectManager.init();
+                console.log('✓ projectManager initialized');
+            } catch (error) {
+                console.error('✗ projectManager initialization failed:', error);
+                throw error;
+            }
+            
+            try {
+                console.log('Initializing fileManager...');
+                if (!window.fileManager) {
+                    throw new Error('fileManager not found');
+                }
+                window.fileManager.init();
+                console.log('✓ fileManager initialized');
+            } catch (error) {
+                console.error('✗ fileManager initialization failed:', error);
+                throw error;
+            }
+            
+            try {
+                console.log('Initializing effectsManager...');
+                if (!window.effectsManager) {
+                    throw new Error('effectsManager not found');
+                }
+                window.effectsManager.init();
+                console.log('✓ effectsManager initialized');
+            } catch (error) {
+                console.error('✗ effectsManager initialization failed:', error);
+                throw error;
+            }
+            
+            try {
+                console.log('Initializing exportManager...');
+                if (!window.exportManager) {
+                    throw new Error('exportManager not found');
+                }
+                window.exportManager.init();
+                console.log('✓ exportManager initialized');
+            } catch (error) {
+                console.error('✗ exportManager initialization failed:', error);
+                throw error;
+            }
             
             // イベントリスナー設定
+            console.log('Setting up event listeners...');
             this.setupEventListeners();
+            console.log('✓ Event listeners set up');
             
             // 新規プロジェクト作成（この中で初期トラックも作成される）
+            console.log('Creating new project...');
             this.createNewProject();
+            console.log('✓ New project created');
             
-            console.log('VoiceDrama DAW initialized successfully');
+            console.log('✓ VoiceDrama DAW initialized successfully');
         } catch (error) {
             console.error('Initialization error:', error);
-            alert('アプリケーションの初期化に失敗しました');
+            console.error('Error stack:', error.stack);
+            alert(`アプリケーションの初期化に失敗しました\n\nエラー: ${error.message}\n\n詳細はコンソールを確認してください`);
         }
     }
     
