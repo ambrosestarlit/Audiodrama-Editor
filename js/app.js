@@ -52,6 +52,15 @@ class VoiceDramaDAW {
             this.openLoadProjectModal();
         });
         
+        // アンドゥ・リドゥ
+        document.getElementById('undoBtn')?.addEventListener('click', () => {
+            window.historyManager.undo();
+        });
+        
+        document.getElementById('redoBtn')?.addEventListener('click', () => {
+            window.historyManager.redo();
+        });
+        
         // トランスポートコントロール
         const playBtn = document.getElementById('playBtn');
         if (playBtn) {
@@ -107,6 +116,33 @@ class VoiceDramaDAW {
                     modal.classList.remove('active');
                 }
             });
+        });
+        
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+            
+            // Cmd/Ctrl + Z: アンドゥ
+            if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                window.historyManager.undo();
+            }
+            
+            // Cmd/Ctrl + Y (Windows) または Cmd/Ctrl + Shift + Z (Mac): リドゥ
+            if (cmdOrCtrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                window.historyManager.redo();
+            }
+            
+            // Delete (Windows) または Backspace (Mac): 選択中のクリップを削除
+            if (e.key === 'Delete' || (isMac && e.key === 'Backspace')) {
+                if (window.trackManager.selectedClip) {
+                    e.preventDefault();
+                    const { trackId, clipId } = window.trackManager.selectedClip;
+                    window.trackManager.removeClip(trackId, clipId);
+                }
+            }
         });
     }
     

@@ -422,6 +422,97 @@ class TrackManager {
         document.getElementById('tracksContainer').innerHTML = '';
         this.updateTrackCount();
     }
+    
+    // クリップ削除
+    removeClip(trackId, clipId) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        const clipIndex = track.clips.findIndex(c => c.id === clipId);
+        if (clipIndex === -1) return;
+        
+        const clip = track.clips[clipIndex];
+        
+        // 履歴に記録
+        window.historyManager.pushAction({
+            undo: () => {
+                // クリップを復元
+                this.restoreClip(trackId, clip, clipIndex);
+            },
+            redo: () => {
+                // クリップを削除
+                this.deleteClip(trackId, clipId);
+            }
+        });
+        
+        // 実際の削除処理
+        this.deleteClip(trackId, clipId);
+    }
+    
+    // クリップの実際の削除処理
+    deleteClip(trackId, clipId) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        const clipIndex = track.clips.findIndex(c => c.id === clipId);
+        if (clipIndex === -1) return;
+        
+        // trackManagerから削除
+        track.clips.splice(clipIndex, 1);
+        
+        // audioEngineから削除
+        window.audioEngine.removeClip(trackId, clipId);
+        
+        // DOMから削除
+        const clipElement = document.querySelector(`[data-clip-id="${clipId}"][data-track-id="${trackId}"]`);
+        if (clipElement) {
+            clipElement.remove();
+        }
+        
+        // 選択解除
+        if (this.selectedClip && this.selectedClip.clipId === clipId) {
+            this.selectedClip = null;
+        }
+    }
+    
+    // クリップを復元
+    async restoreClip(trackId, clipData, insertIndex) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        // オーディオファイルを取得
+        const audioFile = await window.fileManager.getAudioFile(clipData.fileId);
+        if (!audioFile) return;
+        
+        // trackManagerに追加
+        const clip = {
+            id: clipData.id,
+            fileId: clipData.fileId,
+            name: clipData.name,
+            startTime: clipData.startTime,
+            duration: clipData.duration,
+            offset: clipData.offset,
+            fadeIn: clipData.fadeIn,
+            fadeOut: clipData.fadeOut
+        };
+        
+        track.clips.splice(insertIndex, 0, clip);
+        
+        // audioEngineに追加
+        window.audioEngine.addClip(trackId, {
+            id: clip.id,
+            name: clip.name,
+            audioBuffer: audioFile.audioBuffer,
+            startTime: clip.startTime,
+            offset: clip.offset,
+            duration: clip.duration,
+            fadeIn: clip.fadeIn,
+            fadeOut: clip.fadeOut
+        });
+        
+        // DOMに追加
+        this.renderClip(trackId, clip);
+    }
 }
 
 // グローバルインスタンス
