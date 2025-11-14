@@ -302,7 +302,6 @@ body {
     position: absolute;
     top: 50px; /* timeline-headerの高さ分 */
     bottom: 0;
-    left: 200px; /* 初期位置：トラックヘッダー幅 */
     width: 2px;
     background: var(--color-danger);
     z-index: 100;
