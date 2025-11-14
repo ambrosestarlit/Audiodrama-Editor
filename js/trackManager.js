@@ -284,6 +284,16 @@ class TrackManager {
         if (this.dragTarget.type === 'move') {
             const newStartTime = Math.max(0, this.dragStartTime + deltaTime);
             clip.startTime = newStartTime;
+            
+            // audioEngineのクリップも更新
+            const audioTrack = window.audioEngine.getTrack(this.dragTarget.trackId);
+            if (audioTrack) {
+                const audioClip = audioTrack.clips.find(c => c.id === this.dragTarget.clipId);
+                if (audioClip) {
+                    audioClip.startTime = newStartTime;
+                }
+            }
+            
             this.updateClipPosition(this.dragTarget.trackId, clip.id);
         }
         // リサイズは簡易実装（詳細は後で追加可能）
