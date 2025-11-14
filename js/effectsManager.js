@@ -15,6 +15,89 @@ class EffectsManager {
     
     // イベントリスナー設定
     setupEventListeners() {
+        // イコライザー - Low
+        const eqLow = document.getElementById('eqLow');
+        if (eqLow) {
+            eqLow.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackEQ(this.currentTrackId, 'low', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+                }
+            });
+        }
+        
+        // イコライザー - Mid
+        const eqMid = document.getElementById('eqMid');
+        if (eqMid) {
+            eqMid.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackEQ(this.currentTrackId, 'mid', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+                }
+            });
+        }
+        
+        // イコライザー - High
+        const eqHigh = document.getElementById('eqHigh');
+        if (eqHigh) {
+            eqHigh.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackEQ(this.currentTrackId, 'high', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+                }
+            });
+        }
+        
+        // イコライザープリセットボタン
+        document.querySelectorAll('.eq-preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const preset = e.target.dataset.preset;
+                const values = window.audioEngine.setTrackEQPreset(this.currentTrackId, preset);
+                
+                if (values) {
+                    // UIを更新
+                    if (eqLow) {
+                        eqLow.value = values.low;
+                        const valueDisplay = eqLow.nextElementSibling;
+                        if (valueDisplay) {
+                            valueDisplay.textContent = `${values.low >= 0 ? '+' : ''}${values.low.toFixed(1)} dB`;
+                        }
+                    }
+                    if (eqMid) {
+                        eqMid.value = values.mid;
+                        const valueDisplay = eqMid.nextElementSibling;
+                        if (valueDisplay) {
+                            valueDisplay.textContent = `${values.mid >= 0 ? '+' : ''}${values.mid.toFixed(1)} dB`;
+                        }
+                    }
+                    if (eqHigh) {
+                        eqHigh.value = values.high;
+                        const valueDisplay = eqHigh.nextElementSibling;
+                        if (valueDisplay) {
+                            valueDisplay.textContent = `${values.high >= 0 ? '+' : ''}${values.high.toFixed(1)} dB`;
+                        }
+                    }
+                }
+            });
+        });
+        
         // トラックリミッター有効化チェックボックス
         const enabledCheckbox = document.getElementById('trackLimiterEnabled');
         if (enabledCheckbox) {
@@ -95,6 +178,37 @@ class EffectsManager {
     loadTrackLimiterSettings(trackId) {
         const track = window.audioEngine.getTrack(trackId);
         if (!track) return;
+        
+        // イコライザー設定を読み込み
+        const eqLow = document.getElementById('eqLow');
+        if (eqLow && track.eq) {
+            const value = track.eq.low.gain.value;
+            eqLow.value = value;
+            const valueDisplay = eqLow.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+            }
+        }
+        
+        const eqMid = document.getElementById('eqMid');
+        if (eqMid && track.eq) {
+            const value = track.eq.mid.gain.value;
+            eqMid.value = value;
+            const valueDisplay = eqMid.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+            }
+        }
+        
+        const eqHigh = document.getElementById('eqHigh');
+        if (eqHigh && track.eq) {
+            const value = track.eq.high.gain.value;
+            eqHigh.value = value;
+            const valueDisplay = eqHigh.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+            }
+        }
         
         // 有効化チェックボックス
         const enabledCheckbox = document.getElementById('trackLimiterEnabled');

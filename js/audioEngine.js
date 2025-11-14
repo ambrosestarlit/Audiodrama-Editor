@@ -131,6 +131,11 @@ class AudioEngine {
             gain: this.audioContext.createGain(),
             pan: this.audioContext.createStereoPanner(),
             limiter: this.audioContext.createDynamicsCompressor(),
+            eq: {
+                low: this.audioContext.createBiquadFilter(),
+                mid: this.audioContext.createBiquadFilter(),
+                high: this.audioContext.createBiquadFilter()
+            },
             mute: false,
             solo: false,
             volume: 0.8,
@@ -147,10 +152,27 @@ class AudioEngine {
         track.limiter.attack.value = 0.003;
         track.limiter.release.value = 0.25;
         
-        // 接続: Track Gain -> Pan -> (Limiter) -> EQ
+        // イコライザー設定
+        track.eq.low.type = 'lowshelf';
+        track.eq.low.frequency.value = 100;
+        track.eq.low.gain.value = 0;
+        
+        track.eq.mid.type = 'peaking';
+        track.eq.mid.frequency.value = 1000;
+        track.eq.mid.Q.value = 1;
+        track.eq.mid.gain.value = 0;
+        
+        track.eq.high.type = 'highshelf';
+        track.eq.high.frequency.value = 10000;
+        track.eq.high.gain.value = 0;
+        
+        // 接続: Track Gain -> Pan -> EQ Low -> EQ Mid -> EQ High -> (Limiter) -> Master EQ
         track.gain.connect(track.pan);
+        track.pan.connect(track.eq.low);
+        track.eq.low.connect(track.eq.mid);
+        track.eq.mid.connect(track.eq.high);
         // 初期状態ではリミッターをバイパス
-        track.pan.connect(this.eq.low);
+        track.eq.high.connect(this.eq.low);
         
         this.tracks.push(track);
         return track;
@@ -263,15 +285,15 @@ class AudioEngine {
         track.limiterEnabled = enabled;
         
         // 接続を変更
-        track.pan.disconnect();
+        track.eq.high.disconnect();
         
         if (enabled) {
-            // Pan -> Limiter -> EQ
-            track.pan.connect(track.limiter);
+            // EQ High -> Limiter -> Master EQ
+            track.eq.high.connect(track.limiter);
             track.limiter.connect(this.eq.low);
         } else {
-            // Pan -> EQ (リミッターをバイパス)
-            track.pan.connect(this.eq.low);
+            // EQ High -> Master EQ (リミッターをバイパス)
+            track.eq.high.connect(this.eq.low);
         }
     }
     
@@ -290,6 +312,45 @@ class AudioEngine {
             case 'ratio':
                 track.limiter.ratio.value = value;
                 break;
+        }
+    }
+    
+    // トラックイコライザーの設定
+    setTrackEQ(trackId, band, gain) {
+        const track = this.getTrack(trackId);
+        if (!track || !track.eq) return;
+        
+        switch(band) {
+            case 'low':
+                track.eq.low.gain.value = gain;
+                break;
+            case 'mid':
+                track.eq.mid.gain.value = gain;
+                break;
+            case 'high':
+                track.eq.high.gain.value = gain;
+                break;
+        }
+    }
+    
+    // トラックイコライザーのプリセット
+    setTrackEQPreset(trackId, preset) {
+        const track = this.getTrack(trackId);
+        if (!track || !track.eq) return;
+        
+        const presets = {
+            flat: { low: 0, mid: 0, high: 0 },
+            phone: { low: -8, mid: 4, high: -6 }, // 電話風（中域強調、低域と高域カット）
+            radio: { low: -3, mid: 2, high: 1 }   // ラジオ風（軽く中高域強調）
+        };
+        
+        const values = presets[preset];
+        if (values) {
+            track.eq.low.gain.value = values.low;
+            track.eq.mid.gain.value = values.mid;
+            track.eq.high.gain.value = values.high;
+            
+            return values;
         }
     }
     
