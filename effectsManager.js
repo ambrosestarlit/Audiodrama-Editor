@@ -162,11 +162,27 @@ class EffectsManager {
                 const enabled = e.target.checked;
                 window.audioEngine.setTrackNoiseReductionEnabled(this.currentTrackId, enabled);
                 
-                // スライダーの有効/無効を切り替え
-                const sliders = ['trackNoiseReductionCutoff', 'trackNoiseReductionResonance'];
-                sliders.forEach(id => {
+                // ハイパス・ローパスのチェックボックスの有効/無効を切り替え
+                const checkboxes = ['trackHighpassEnabled', 'trackLowpassEnabled'];
+                checkboxes.forEach(id => {
+                    const checkbox = document.getElementById(id);
+                    if (checkbox) checkbox.disabled = !enabled;
+                });
+                
+                // スライダーの有効/無効を切り替え（チェック状態も考慮）
+                const highpassEnabled = document.getElementById('trackHighpassEnabled')?.checked;
+                const lowpassEnabled = document.getElementById('trackLowpassEnabled')?.checked;
+                
+                const highpassSliders = ['trackHighpassCutoff', 'trackHighpassResonance'];
+                highpassSliders.forEach(id => {
                     const slider = document.getElementById(id);
-                    if (slider) slider.disabled = !enabled;
+                    if (slider) slider.disabled = !enabled || !highpassEnabled;
+                });
+                
+                const lowpassSliders = ['trackLowpassCutoff', 'trackLowpassResonance'];
+                lowpassSliders.forEach(id => {
+                    const slider = document.getElementById(id);
+                    if (slider) slider.disabled = !enabled || !lowpassEnabled;
                 });
                 
                 // FXボタンの状態を更新
@@ -174,14 +190,36 @@ class EffectsManager {
             });
         }
         
-        // ノイズリダクション - Cutoff
-        const noiseReductionCutoff = document.getElementById('trackNoiseReductionCutoff');
-        if (noiseReductionCutoff) {
-            noiseReductionCutoff.addEventListener('input', (e) => {
+        // ハイパスフィルタ有効化チェックボックス
+        const highpassEnabledCheckbox = document.getElementById('trackHighpassEnabled');
+        if (highpassEnabledCheckbox) {
+            highpassEnabledCheckbox.addEventListener('change', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const enabled = e.target.checked;
+                window.audioEngine.setTrackHighpassEnabled(this.currentTrackId, enabled);
+                
+                // スライダーの有効/無効を切り替え
+                const sliders = ['trackHighpassCutoff', 'trackHighpassResonance'];
+                const noiseReductionEnabled = document.getElementById('trackNoiseReductionEnabled')?.checked;
+                sliders.forEach(id => {
+                    const slider = document.getElementById(id);
+                    if (slider) slider.disabled = !noiseReductionEnabled || !enabled;
+                });
+                
+                // FXボタンの状態を更新
+                this.updateFXButtonState(this.currentTrackId);
+            });
+        }
+        
+        // ハイパスフィルタ - Cutoff
+        const highpassCutoff = document.getElementById('trackHighpassCutoff');
+        if (highpassCutoff) {
+            highpassCutoff.addEventListener('input', (e) => {
                 if (this.currentTrackId === null) return;
                 
                 const value = parseFloat(e.target.value);
-                window.audioEngine.setTrackNoiseReduction(this.currentTrackId, 'cutoff', value);
+                window.audioEngine.setTrackNoiseReduction(this.currentTrackId, 'highpassCutoff', value);
                 
                 const valueDisplay = e.target.nextElementSibling;
                 if (valueDisplay) {
@@ -190,18 +228,72 @@ class EffectsManager {
             });
         }
         
-        // ノイズリダクション - Resonance
-        const noiseReductionResonance = document.getElementById('trackNoiseReductionResonance');
-        if (noiseReductionResonance) {
-            noiseReductionResonance.addEventListener('input', (e) => {
+        // ハイパスフィルタ - Resonance
+        const highpassResonance = document.getElementById('trackHighpassResonance');
+        if (highpassResonance) {
+            highpassResonance.addEventListener('input', (e) => {
                 if (this.currentTrackId === null) return;
                 
                 const value = parseFloat(e.target.value);
-                window.audioEngine.setTrackNoiseReduction(this.currentTrackId, 'resonance', value);
+                window.audioEngine.setTrackNoiseReduction(this.currentTrackId, 'highpassResonance', value);
                 
                 const valueDisplay = e.target.nextElementSibling;
                 if (valueDisplay) {
-                    valueDisplay.textContent = value.toFixed(1);
+                    valueDisplay.textContent = value.toFixed(2);
+                }
+            });
+        }
+        
+        // ローパスフィルタ有効化チェックボックス
+        const lowpassEnabledCheckbox = document.getElementById('trackLowpassEnabled');
+        if (lowpassEnabledCheckbox) {
+            lowpassEnabledCheckbox.addEventListener('change', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const enabled = e.target.checked;
+                window.audioEngine.setTrackLowpassEnabled(this.currentTrackId, enabled);
+                
+                // スライダーの有効/無効を切り替え
+                const sliders = ['trackLowpassCutoff', 'trackLowpassResonance'];
+                const noiseReductionEnabled = document.getElementById('trackNoiseReductionEnabled')?.checked;
+                sliders.forEach(id => {
+                    const slider = document.getElementById(id);
+                    if (slider) slider.disabled = !noiseReductionEnabled || !enabled;
+                });
+                
+                // FXボタンの状態を更新
+                this.updateFXButtonState(this.currentTrackId);
+            });
+        }
+        
+        // ローパスフィルタ - Cutoff
+        const lowpassCutoff = document.getElementById('trackLowpassCutoff');
+        if (lowpassCutoff) {
+            lowpassCutoff.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackNoiseReduction(this.currentTrackId, 'lowpassCutoff', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value.toFixed(0)} Hz`;
+                }
+            });
+        }
+        
+        // ローパスフィルタ - Resonance
+        const lowpassResonance = document.getElementById('trackLowpassResonance');
+        if (lowpassResonance) {
+            lowpassResonance.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackNoiseReduction(this.currentTrackId, 'lowpassResonance', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = value.toFixed(2);
                 }
             });
         }
@@ -341,27 +433,65 @@ class EffectsManager {
             noiseReductionEnabledCheckbox.checked = track.noiseReductionEnabled || false;
         }
         
-        // ノイズリダクション - Cutoff
-        const noiseReductionCutoff = document.getElementById('trackNoiseReductionCutoff');
-        if (noiseReductionCutoff) {
-            const value = track.noiseReduction.cutoffFreq;
-            noiseReductionCutoff.value = value;
-            noiseReductionCutoff.disabled = !track.noiseReductionEnabled;
-            const valueDisplay = noiseReductionCutoff.nextElementSibling;
+        // ハイパスフィルタ有効化チェックボックス
+        const highpassEnabledCheckbox = document.getElementById('trackHighpassEnabled');
+        if (highpassEnabledCheckbox) {
+            highpassEnabledCheckbox.checked = track.noiseReduction.highpassEnabled || false;
+            highpassEnabledCheckbox.disabled = !track.noiseReductionEnabled;
+        }
+        
+        // ハイパスフィルタ - Cutoff
+        const highpassCutoff = document.getElementById('trackHighpassCutoff');
+        if (highpassCutoff) {
+            const value = track.noiseReduction.highpassCutoff;
+            highpassCutoff.value = value;
+            highpassCutoff.disabled = !track.noiseReductionEnabled || !track.noiseReduction.highpassEnabled;
+            const valueDisplay = highpassCutoff.nextElementSibling;
             if (valueDisplay) {
                 valueDisplay.textContent = `${value.toFixed(0)} Hz`;
             }
         }
         
-        // ノイズリダクション - Resonance
-        const noiseReductionResonance = document.getElementById('trackNoiseReductionResonance');
-        if (noiseReductionResonance) {
-            const value = track.noiseReduction.resonance;
-            noiseReductionResonance.value = value;
-            noiseReductionResonance.disabled = !track.noiseReductionEnabled;
-            const valueDisplay = noiseReductionResonance.nextElementSibling;
+        // ハイパスフィルタ - Resonance
+        const highpassResonance = document.getElementById('trackHighpassResonance');
+        if (highpassResonance) {
+            const value = track.noiseReduction.highpassResonance;
+            highpassResonance.value = value;
+            highpassResonance.disabled = !track.noiseReductionEnabled || !track.noiseReduction.highpassEnabled;
+            const valueDisplay = highpassResonance.nextElementSibling;
             if (valueDisplay) {
-                valueDisplay.textContent = value.toFixed(1);
+                valueDisplay.textContent = value.toFixed(2);
+            }
+        }
+        
+        // ローパスフィルタ有効化チェックボックス
+        const lowpassEnabledCheckbox = document.getElementById('trackLowpassEnabled');
+        if (lowpassEnabledCheckbox) {
+            lowpassEnabledCheckbox.checked = track.noiseReduction.lowpassEnabled || false;
+            lowpassEnabledCheckbox.disabled = !track.noiseReductionEnabled;
+        }
+        
+        // ローパスフィルタ - Cutoff
+        const lowpassCutoff = document.getElementById('trackLowpassCutoff');
+        if (lowpassCutoff) {
+            const value = track.noiseReduction.lowpassCutoff;
+            lowpassCutoff.value = value;
+            lowpassCutoff.disabled = !track.noiseReductionEnabled || !track.noiseReduction.lowpassEnabled;
+            const valueDisplay = lowpassCutoff.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(0)} Hz`;
+            }
+        }
+        
+        // ローパスフィルタ - Resonance
+        const lowpassResonance = document.getElementById('trackLowpassResonance');
+        if (lowpassResonance) {
+            const value = track.noiseReduction.lowpassResonance;
+            lowpassResonance.value = value;
+            lowpassResonance.disabled = !track.noiseReductionEnabled || !track.noiseReduction.lowpassEnabled;
+            const valueDisplay = lowpassResonance.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = value.toFixed(2);
             }
         }
         
