@@ -15,6 +15,14 @@ class EffectsManager {
     
     // イベントリスナー設定
     setupEventListeners() {
+        // パネルを閉じるボタン
+        const closeBtn = document.getElementById('closeEffectsBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.closePanel();
+            });
+        }
+        
         // イコライザー有効化チェックボックス
         const eqEnabledCheckbox = document.getElementById('trackEQEnabled');
         if (eqEnabledCheckbox) {
@@ -344,6 +352,16 @@ class EffectsManager {
         
         this.isOpen = !this.isOpen;
         panel.classList.toggle('open', this.isOpen);
+    }
+    
+    // パネルを閉じる
+    closePanel() {
+        const panel = document.getElementById('effectsPanel');
+        if (!panel) return;
+        
+        this.isOpen = false;
+        panel.classList.remove('open');
+        this.currentTrackId = null;
     }
     
     // トラックエフェクトパネルを開く
