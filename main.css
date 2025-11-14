@@ -217,25 +217,36 @@ body {
 }
 
 .transport-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-medium);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%; /* 丸いボタンに */
     border: none;
-    background: var(--color-primary);
+    background: transparent; /* 画像を活かすため透過 */
     color: white;
-    font-size: 18px;
+    font-size: 20px;
     cursor: pointer;
     transition: all var(--transition-fast);
-    box-shadow: var(--shadow-small);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    overflow: hidden;
+}
+
+.transport-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .transport-btn:hover {
-    background: var(--color-primary-light);
-    transform: scale(1.05);
+    transform: translateY(-2px) scale(1.08);
+    filter: brightness(1.1);
 }
 
 .transport-btn:active {
-    transform: scale(0.95);
+    transform: translateY(0) scale(0.95);
+    filter: brightness(0.95);
 }
 
 .time-display {
