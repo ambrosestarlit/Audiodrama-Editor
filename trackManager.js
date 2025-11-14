@@ -595,8 +595,20 @@ class TrackManager {
                 limiterEnabled = true;
                 limiterThreshold = audioTrack.limiter.threshold.value;
                 limiterRatio = audioTrack.limiter.ratio.value;
+                console.log('🔧 Limiter Settings:', {
+                    enabled: limiterEnabled,
+                    threshold: limiterThreshold,
+                    ratio: limiterRatio,
+                    thresholdLinear: Math.pow(10, limiterThreshold / 20)
+                });
             }
         }
+        
+        console.log('📊 Waveform Effect Settings:', {
+            clipGain: clipGainDb,
+            eqMultiplier: eqMultiplier,
+            limiterEnabled: limiterEnabled
+        });
         
         // 総合ゲイン（クリップゲイン × EQ効果）
         const totalGain = clipGainLinear * eqMultiplier;
@@ -615,9 +627,20 @@ class TrackManager {
                 const thresholdLinear = Math.pow(10, limiterThreshold / 20);
                 
                 if (max > thresholdLinear) {
+                    const originalMax = max;
                     // 閾値を超えた分を圧縮
                     const over = max - thresholdLinear;
                     max = thresholdLinear + (over / limiterRatio);
+                    
+                    // 最初のサンプルだけログ出力
+                    if (i === 0) {
+                        console.log('🔴 Limiter Applied:', {
+                            original: originalMax.toFixed(3),
+                            threshold: thresholdLinear.toFixed(3),
+                            compressed: max.toFixed(3),
+                            ratio: limiterRatio
+                        });
+                    }
                 }
             }
             
