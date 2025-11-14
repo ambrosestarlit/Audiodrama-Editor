@@ -200,8 +200,12 @@ class VoiceDramaDAW {
     // 新規プロジェクト作成
     createNewProject() {
         // 既存トラックをクリア
-        window.trackManager.clearAllTracks();
-        window.fileManager.clearFileList();
+        if (window.trackManager) {
+            window.trackManager.clearAllTracks();
+        }
+        if (window.fileManager) {
+            window.fileManager.clearFileList();
+        }
         
         // 新規プロジェクト
         const project = window.projectManager.createNewProject();
