@@ -359,7 +359,7 @@ class VoiceDramaDAW {
         
         const playhead = document.createElement('div');
         playhead.className = 'playhead';
-        playhead.style.left = '200px'; // トラックヘッダー幅
+        // CSSで left: 200px が設定されているので、ここでは設定不要
         timelineArea.appendChild(playhead);
     }
     
@@ -368,6 +368,7 @@ class VoiceDramaDAW {
         const playhead = document.querySelector('.playhead');
         if (!playhead) return;
         
+        // CSSで既に200pxオフセットされているので、時間だけを掛ける
         const leftPos = 200 + (window.audioEngine.currentTime * window.trackManager.pixelsPerSecond);
         playhead.style.left = `${leftPos}px`;
     }
