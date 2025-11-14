@@ -133,8 +133,13 @@ class AudioEngine {
             limiter: this.audioContext.createDynamicsCompressor(),
             noiseReduction: {
                 highpass: this.audioContext.createBiquadFilter(),
-                cutoffFreq: 80,
-                resonance: 0.7
+                lowpass: this.audioContext.createBiquadFilter(),
+                highpassCutoff: 80,
+                lowpassCutoff: 8000,
+                highpassResonance: 0.7,
+                lowpassResonance: 0.7,
+                highpassEnabled: false,
+                lowpassEnabled: false
             },
             eq: {
                 low: this.audioContext.createBiquadFilter(),
@@ -162,7 +167,12 @@ class AudioEngine {
         // ノイズリダクション設定（ハイパスフィルター）
         track.noiseReduction.highpass.type = 'highpass';
         track.noiseReduction.highpass.frequency.value = 20; // 初期は20Hz(ほぼ無効)
-        track.noiseReduction.highpass.Q.value = track.noiseReduction.resonance;
+        track.noiseReduction.highpass.Q.value = track.noiseReduction.highpassResonance;
+        
+        // ノイズリダクション設定（ローパスフィルター）
+        track.noiseReduction.lowpass.type = 'lowpass';
+        track.noiseReduction.lowpass.frequency.value = 20000; // 初期は20kHz(ほぼ無効)
+        track.noiseReduction.lowpass.Q.value = track.noiseReduction.lowpassResonance;
         
         // イコライザー設定
         track.eq.low.type = 'lowshelf';
@@ -178,9 +188,10 @@ class AudioEngine {
         track.eq.high.frequency.value = 10000;
         track.eq.high.gain.value = 0;
         
-        // 接続: Track Gain -> Noise Reduction -> Pan -> (EQ) -> (Limiter) -> Master EQ
+        // 接続: Track Gain -> Highpass -> Lowpass -> Pan -> (EQ) -> (Limiter) -> Master EQ
         track.gain.connect(track.noiseReduction.highpass);
-        track.noiseReduction.highpass.connect(track.pan);
+        track.noiseReduction.highpass.connect(track.noiseReduction.lowpass);
+        track.noiseReduction.lowpass.connect(track.pan);
         // 初期状態ではEQをバイパス
         track.pan.connect(this.eq.low);
         
@@ -257,12 +268,15 @@ class AudioEngine {
         
         track.solo = solo;
         
-        // ソロトラックがある場合、他のトラックをミュート
+        // ソロ状態を更新
         const hasSolo = this.tracks.some(t => t.solo);
+        
         this.tracks.forEach(t => {
             if (hasSolo) {
+                // ソロトラックがある場合、ソロ以外をミュート
                 t.gain.gain.value = (t.solo && !t.mute) ? t.volume : 0;
             } else {
+                // ソロがない場合、通常のミュート状態に戻す
                 t.gain.gain.value = t.mute ? 0 : t.volume;
             }
         });
@@ -274,8 +288,13 @@ class AudioEngine {
         if (!track) return;
         
         track.volume = volume;
-        if (!track.mute) {
-            track.gain.gain.value = volume;
+        
+        // ミュートやソロ状態を考慮
+        const hasSolo = this.tracks.some(t => t.solo);
+        if (hasSolo) {
+            track.gain.gain.value = (track.solo && !track.mute) ? volume : 0;
+        } else {
+            track.gain.gain.value = track.mute ? 0 : volume;
         }
     }
     
@@ -284,59 +303,53 @@ class AudioEngine {
         const track = this.getTrack(trackId);
         if (!track) return;
         
-        track.pan.pan.value = pan; // -1 (左) から 1 (右)
+        track.pan.pan.value = pan;
     }
     
-    // トラックイコライザーの有効/無効
-    setTrackEQEnabled(trackId, enabled) {
-        const track = this.getTrack(trackId);
-        if (!track) return;
-        
-        track.eqEnabled = enabled;
-        
-        // 接続を再構築
-        this.reconnectTrackEffects(track);
-    }
-    
-    // トラックリミッターの有効/無効
+    // トラックリミッターの有効化/無効化
     setTrackLimiterEnabled(trackId, enabled) {
         const track = this.getTrack(trackId);
         if (!track) return;
         
         track.limiterEnabled = enabled;
-        
-        // 接続を再構築
-        this.reconnectTrackEffects(track);
+        this.updateTrackEffectChain(track);
     }
     
-    // トラックエフェクトの接続を再構築
-    reconnectTrackEffects(track) {
-        // すべて切断
+    // トラックイコライザーの有効化/無効化
+    setTrackEQEnabled(trackId, enabled) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.eqEnabled = enabled;
+        this.updateTrackEffectChain(track);
+    }
+    
+    // トラックのエフェクトチェーンを更新
+    updateTrackEffectChain(track) {
+        // 一度全て切断
         track.pan.disconnect();
-        track.eq.low.disconnect();
-        track.eq.mid.disconnect();
-        track.eq.high.disconnect();
-        track.limiter.disconnect();
         
-        // 接続を構築: Pan -> (EQ) -> (Limiter) -> Master EQ
-        let currentNode = track.pan;
-        
-        // EQが有効なら接続
-        if (track.eqEnabled) {
-            currentNode.connect(track.eq.low);
+        if (track.eqEnabled && track.limiterEnabled) {
+            // EQ -> Limiter -> Master
+            track.pan.connect(track.eq.low);
             track.eq.low.connect(track.eq.mid);
             track.eq.mid.connect(track.eq.high);
-            currentNode = track.eq.high;
+            track.eq.high.connect(track.limiter);
+            track.limiter.connect(this.eq.low);
+        } else if (track.eqEnabled) {
+            // EQ -> Master
+            track.pan.connect(track.eq.low);
+            track.eq.low.connect(track.eq.mid);
+            track.eq.mid.connect(track.eq.high);
+            track.eq.high.connect(this.eq.low);
+        } else if (track.limiterEnabled) {
+            // Limiter -> Master
+            track.pan.connect(track.limiter);
+            track.limiter.connect(this.eq.low);
+        } else {
+            // Direct -> Master
+            track.pan.connect(this.eq.low);
         }
-        
-        // リミッターが有効なら接続
-        if (track.limiterEnabled) {
-            currentNode.connect(track.limiter);
-            currentNode = track.limiter;
-        }
-        
-        // 最後にMaster EQへ接続
-        currentNode.connect(this.eq.low);
     }
     
     // トラックリミッターのパラメータ設定
@@ -397,7 +410,7 @@ class AudioEngine {
         }
     }
     
-    // ノイズリダクション有効化/無効化
+    // ノイズリダクション有効化/無効化（全体のON/OFF）
     setTrackNoiseReductionEnabled(trackId, enabled) {
         const track = this.getTrack(trackId);
         if (!track) return;
@@ -407,23 +420,90 @@ class AudioEngine {
         console.log('🎛️ Noise Reduction:', {
             trackId: trackId,
             enabled: enabled,
-            currentFreq: track.noiseReduction.highpass.frequency.value,
-            targetFreq: enabled ? track.noiseReduction.cutoffFreq : 20
+            highpass: {
+                enabled: track.noiseReduction.highpassEnabled,
+                currentFreq: track.noiseReduction.highpass.frequency.value,
+                targetFreq: enabled && track.noiseReduction.highpassEnabled ? track.noiseReduction.highpassCutoff : 20
+            },
+            lowpass: {
+                enabled: track.noiseReduction.lowpassEnabled,
+                currentFreq: track.noiseReduction.lowpass.frequency.value,
+                targetFreq: enabled && track.noiseReduction.lowpassEnabled ? track.noiseReduction.lowpassCutoff : 20000
+            }
         });
         
-        if (enabled) {
-            // 有効化: 設定されたカットオフ周波数に
-            track.noiseReduction.highpass.frequency.value = track.noiseReduction.cutoffFreq;
+        // ハイパスフィルタの更新
+        if (enabled && track.noiseReduction.highpassEnabled) {
+            track.noiseReduction.highpass.frequency.value = track.noiseReduction.highpassCutoff;
         } else {
-            // 無効化: 20Hzに下げてほぼバイパス
-            track.noiseReduction.highpass.frequency.value = 20;
+            track.noiseReduction.highpass.frequency.value = 20; // バイパス
+        }
+        
+        // ローパスフィルタの更新
+        if (enabled && track.noiseReduction.lowpassEnabled) {
+            track.noiseReduction.lowpass.frequency.value = track.noiseReduction.lowpassCutoff;
+        } else {
+            track.noiseReduction.lowpass.frequency.value = 20000; // バイパス
         }
         
         console.log('🔊 After change:', {
-            frequency: track.noiseReduction.highpass.frequency.value,
-            Q: track.noiseReduction.highpass.Q.value,
-            type: track.noiseReduction.highpass.type
+            highpass: {
+                frequency: track.noiseReduction.highpass.frequency.value,
+                Q: track.noiseReduction.highpass.Q.value,
+                type: track.noiseReduction.highpass.type
+            },
+            lowpass: {
+                frequency: track.noiseReduction.lowpass.frequency.value,
+                Q: track.noiseReduction.lowpass.Q.value,
+                type: track.noiseReduction.lowpass.type
+            }
         });
+    }
+    
+    // ハイパスフィルタの個別ON/OFF
+    setTrackHighpassEnabled(trackId, enabled) {
+        const track = this.getTrack(trackId);
+        if (!track || !track.noiseReduction) return;
+        
+        track.noiseReduction.highpassEnabled = enabled;
+        
+        console.log('🔧 Highpass Filter Toggle:', {
+            trackId: trackId,
+            enabled: enabled,
+            noiseReductionEnabled: track.noiseReductionEnabled
+        });
+        
+        // ノイズリダクション全体が有効な場合のみ反映
+        if (track.noiseReductionEnabled) {
+            if (enabled) {
+                track.noiseReduction.highpass.frequency.value = track.noiseReduction.highpassCutoff;
+            } else {
+                track.noiseReduction.highpass.frequency.value = 20; // バイパス
+            }
+        }
+    }
+    
+    // ローパスフィルタの個別ON/OFF
+    setTrackLowpassEnabled(trackId, enabled) {
+        const track = this.getTrack(trackId);
+        if (!track || !track.noiseReduction) return;
+        
+        track.noiseReduction.lowpassEnabled = enabled;
+        
+        console.log('🔧 Lowpass Filter Toggle:', {
+            trackId: trackId,
+            enabled: enabled,
+            noiseReductionEnabled: track.noiseReductionEnabled
+        });
+        
+        // ノイズリダクション全体が有効な場合のみ反映
+        if (track.noiseReductionEnabled) {
+            if (enabled) {
+                track.noiseReduction.lowpass.frequency.value = track.noiseReduction.lowpassCutoff;
+            } else {
+                track.noiseReduction.lowpass.frequency.value = 20000; // バイパス
+            }
+        }
     }
     
     // ノイズリダクション設定変更
@@ -438,21 +518,48 @@ class AudioEngine {
         });
         
         switch(param) {
+            case 'highpassCutoff':
+                track.noiseReduction.highpassCutoff = value;
+                if (track.noiseReductionEnabled && track.noiseReduction.highpassEnabled) {
+                    track.noiseReduction.highpass.frequency.value = value;
+                }
+                break;
+            case 'lowpassCutoff':
+                track.noiseReduction.lowpassCutoff = value;
+                if (track.noiseReductionEnabled && track.noiseReduction.lowpassEnabled) {
+                    track.noiseReduction.lowpass.frequency.value = value;
+                }
+                break;
+            case 'highpassResonance':
+                track.noiseReduction.highpassResonance = value;
+                track.noiseReduction.highpass.Q.value = value;
+                break;
+            case 'lowpassResonance':
+                track.noiseReduction.lowpassResonance = value;
+                track.noiseReduction.lowpass.Q.value = value;
+                break;
+            // 後方互換性のため、古いパラメータ名も対応
             case 'cutoff':
-                track.noiseReduction.cutoffFreq = value;
-                if (track.noiseReductionEnabled) {
+                track.noiseReduction.highpassCutoff = value;
+                if (track.noiseReductionEnabled && track.noiseReduction.highpassEnabled) {
                     track.noiseReduction.highpass.frequency.value = value;
                 }
                 break;
             case 'resonance':
-                track.noiseReduction.resonance = value;
+                track.noiseReduction.highpassResonance = value;
                 track.noiseReduction.highpass.Q.value = value;
                 break;
         }
         
         console.log('🔊 Current filter state:', {
-            frequency: track.noiseReduction.highpass.frequency.value,
-            Q: track.noiseReduction.highpass.Q.value
+            highpass: {
+                frequency: track.noiseReduction.highpass.frequency.value,
+                Q: track.noiseReduction.highpass.Q.value
+            },
+            lowpass: {
+                frequency: track.noiseReduction.lowpass.frequency.value,
+                Q: track.noiseReduction.lowpass.Q.value
+            }
         });
     }
     
