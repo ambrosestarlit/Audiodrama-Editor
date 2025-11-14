@@ -614,6 +614,10 @@ class TrackManager {
         const totalGain = clipGainLinear * eqMultiplier;
         
         // ピークを抽出してエフェクトを適用
+        let maxPeakFound = 0;
+        let samplesAboveThreshold = 0;
+        const thresholdLinear = limiterEnabled ? Math.pow(10, limiterThreshold / 20) : 999;
+        
         for (let i = 0; i < samples; i++) {
             let blockStart = blockSize * i;
             let max = 0;
@@ -622,10 +626,12 @@ class TrackManager {
                 if (val > max) max = val;
             }
             
+            // 最大ピークを記録
+            if (max > maxPeakFound) maxPeakFound = max;
+            if (max > thresholdLinear) samplesAboveThreshold++;
+            
             // リミッターを適用（閾値を超えた部分を圧縮）
             if (limiterEnabled) {
-                const thresholdLinear = Math.pow(10, limiterThreshold / 20);
-                
                 if (max > thresholdLinear) {
                     const originalMax = max;
                     // 閾値を超えた分を圧縮
@@ -633,8 +639,9 @@ class TrackManager {
                     max = thresholdLinear + (over / limiterRatio);
                     
                     // 最初のサンプルだけログ出力
-                    if (i === 0) {
+                    if (i === 0 || samplesAboveThreshold === 1) {
                         console.log('🔴 Limiter Applied:', {
+                            sampleIndex: i,
                             original: originalMax.toFixed(3),
                             threshold: thresholdLinear.toFixed(3),
                             compressed: max.toFixed(3),
@@ -646,6 +653,14 @@ class TrackManager {
             
             filteredData.push(max);
         }
+        
+        console.log('📈 Waveform Peak Analysis:', {
+            maxPeak: maxPeakFound.toFixed(3),
+            threshold: thresholdLinear.toFixed(3),
+            samplesAboveThreshold: samplesAboveThreshold,
+            totalSamples: samples,
+            peakExceedsThreshold: maxPeakFound > thresholdLinear
+        });
         
         // 背景をクリア
         ctx.clearRect(0, 0, width, height);
