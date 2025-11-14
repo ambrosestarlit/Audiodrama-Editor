@@ -22,11 +22,8 @@ class VoiceDramaDAW {
             // イベントリスナー設定
             this.setupEventListeners();
             
-            // 新規プロジェクト作成
+            // 新規プロジェクト作成（この中で初期トラックも作成される）
             this.createNewProject();
-            
-            // 初期トラックを追加
-            window.trackManager.addTrack('メイントラック');
             
             console.log('VoiceDrama DAW initialized successfully');
         } catch (error) {
