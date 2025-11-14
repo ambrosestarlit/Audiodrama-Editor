@@ -517,6 +517,9 @@ class TrackManager {
         
         // ピーク情報を更新
         this.updateClipGainInfo(trackId, clipId);
+        
+        // 素材パネルの波形も更新
+        window.fileManager.updateFileWaveform(clip.fileId, gainDb);
     }
     
     // 全トラッククリア

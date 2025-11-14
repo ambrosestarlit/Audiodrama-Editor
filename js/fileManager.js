@@ -154,6 +154,7 @@ class FileManager {
             <div class="file-item-info">
                 <div class="file-item-name" title="${audioFile.fileName}">${audioFile.name}</div>
                 <div class="file-item-duration">${duration}</div>
+                <div class="file-item-waveform" data-file-id="${audioFile.id}"></div>
             </div>
         `;
         
@@ -177,6 +178,9 @@ class FileManager {
         });
         
         list.appendChild(item);
+        
+        // 波形を描画
+        this.drawWaveform(audioFile, 0);
     }
     
     // カテゴリアイコン取得
@@ -275,6 +279,12 @@ class FileManager {
             
             for (const fileData of savedFiles) {
                 try {
+                    // audioDataがBlobとして保存されているか確認
+                    if (!fileData.audioData || !(fileData.audioData instanceof Blob)) {
+                        console.warn('Invalid audio data for file:', fileData.id);
+                        continue;
+                    }
+                    
                     // BlobをArrayBufferに変換
                     const arrayBuffer = await fileData.audioData.arrayBuffer();
                     
@@ -290,6 +300,8 @@ class FileManager {
                     this.renderFileItem(fileData);
                 } catch (error) {
                     console.error('Failed to load audio file:', fileData.id, error);
+                    // 失敗したファイルをIndexedDBから削除
+                    await window.projectManager.deleteAudioFile(fileData.id);
                 }
             }
         } catch (error) {
@@ -336,6 +348,79 @@ class FileManager {
             file.name.toLowerCase().includes(lowerQuery) ||
             file.fileName.toLowerCase().includes(lowerQuery)
         );
+    }
+    
+    // 波形を描画
+    drawWaveform(file, gainDb = 0) {
+        const waveformContainer = document.querySelector(`.file-item-waveform[data-file-id="${file.id}"]`);
+        if (!waveformContainer || !file.audioBuffer) return;
+        
+        // 既存のcanvasを削除
+        const existingCanvas = waveformContainer.querySelector('canvas');
+        if (existingCanvas) {
+            existingCanvas.remove();
+        }
+        
+        const canvas = document.createElement('canvas');
+        const rect = waveformContainer.getBoundingClientRect();
+        canvas.width = rect.width * 2; // Retina対応
+        canvas.height = rect.height * 2;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        waveformContainer.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // 波形データを取得（モノラル化）
+        const audioBuffer = file.audioBuffer;
+        const rawData = audioBuffer.getChannelData(0); // 最初のチャンネル
+        const samples = Math.floor(width / 2); // 描画幅に合わせてサンプリング
+        const blockSize = Math.floor(rawData.length / samples);
+        const filteredData = [];
+        
+        // ゲイン適用
+        const gainLinear = Math.pow(10, gainDb / 20);
+        
+        // ピークを抽出
+        for (let i = 0; i < samples; i++) {
+            let blockStart = blockSize * i;
+            let max = 0;
+            for (let j = 0; j < blockSize; j++) {
+                const val = Math.abs(rawData[blockStart + j] || 0) * gainLinear;
+                if (val > max) max = val;
+            }
+            filteredData.push(max); // ピーク値を使用
+        }
+        
+        // 背景をクリア
+        ctx.clearRect(0, 0, width, height);
+        
+        // 波形を描画
+        const middle = height / 2;
+        const barWidth = (width / samples);
+        
+        for (let i = 0; i < samples; i++) {
+            const value = filteredData[i];
+            const barHeight = value * middle * 0.9; // 少し余白を持たせる
+            const x = i * barWidth;
+            
+            // クリッピング検出（0dBFS = 1.0超え）
+            const isClipping = value > 1.0;
+            ctx.fillStyle = isClipping ? '#D67373' : '#8B6F47'; // 赤 or チョコレート
+            
+            // 上下対称に描画
+            ctx.fillRect(x, middle - barHeight, barWidth - 1, barHeight * 2);
+        }
+    }
+    
+    // ファイルの波形を更新（ゲイン変更時）
+    updateFileWaveform(fileId, gainDb) {
+        const file = this.getAudioFile(fileId);
+        if (file) {
+            this.drawWaveform(file, gainDb);
+        }
     }
 }
 
