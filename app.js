@@ -22,11 +22,8 @@ class VoiceDramaDAW {
             // イベントリスナー設定
             this.setupEventListeners();
             
-            // 新規プロジェクト作成
+            // 新規プロジェクト作成（この中で初期トラックも作成される）
             this.createNewProject();
-            
-            // 初期トラックを追加
-            window.trackManager.addTrack('メイントラック');
             
             console.log('VoiceDrama DAW initialized successfully');
         } catch (error) {
@@ -52,12 +49,77 @@ class VoiceDramaDAW {
             this.openLoadProjectModal();
         });
         
+        // クリップゲイン調整ポップアップ
+        const clipGainSlider = document.getElementById('clipGainSlider');
+        if (clipGainSlider) {
+            clipGainSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                const valueDisplay = document.getElementById('clipGainValue');
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+                }
+                
+                // リアルタイムでゲインを適用
+                if (window.trackManager.currentGainClip) {
+                    const { trackId, clipId } = window.trackManager.currentGainClip;
+                    window.trackManager.setClipGain(trackId, clipId, value);
+                }
+            });
+        }
+        
+        // ゲインプリセットボタン
+        document.querySelectorAll('.gain-preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const value = parseFloat(e.target.dataset.value);
+                const slider = document.getElementById('clipGainSlider');
+                if (slider) {
+                    slider.value = value;
+                    const valueDisplay = document.getElementById('clipGainValue');
+                    if (valueDisplay) {
+                        valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
+                    }
+                    
+                    // ゲインを適用
+                    if (window.trackManager.currentGainClip) {
+                        const { trackId, clipId } = window.trackManager.currentGainClip;
+                        window.trackManager.setClipGain(trackId, clipId, value);
+                    }
+                }
+            });
+        });
+        
+        // クリップゲインポップアップを閉じる
+        const closeClipGainBtn = document.getElementById('closeClipGainBtn');
+        if (closeClipGainBtn) {
+            closeClipGainBtn.addEventListener('click', () => {
+                const popup = document.getElementById('clipGainPopup');
+                if (popup) {
+                    popup.style.display = 'none';
+                    window.trackManager.currentGainClip = null;
+                }
+            });
+        }
+        
+        // アンドゥ・リドゥ
+        document.getElementById('undoBtn')?.addEventListener('click', () => {
+            window.historyManager.undo();
+        });
+        
+        document.getElementById('redoBtn')?.addEventListener('click', () => {
+            window.historyManager.redo();
+        });
+        
         // トランスポートコントロール
         const playBtn = document.getElementById('playBtn');
         if (playBtn) {
             playBtn.addEventListener('click', async () => {
                 console.log('Play button clicked in app.js');
-                await this.play();
+                try {
+                    await this.play();
+                    console.log('Play completed successfully');
+                } catch (error) {
+                    console.error('Play error:', error);
+                }
             });
         }
         
@@ -103,13 +165,44 @@ class VoiceDramaDAW {
                 }
             });
         });
+        
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+            
+            // Cmd/Ctrl + Z: アンドゥ
+            if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                window.historyManager.undo();
+            }
+            
+            // Cmd/Ctrl + Y (Windows) または Cmd/Ctrl + Shift + Z (Mac): リドゥ
+            if (cmdOrCtrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                window.historyManager.redo();
+            }
+            
+            // Delete (Windows) または Backspace (Mac): 選択中のクリップを削除
+            if (e.key === 'Delete' || (isMac && e.key === 'Backspace')) {
+                if (window.trackManager.selectedClip) {
+                    e.preventDefault();
+                    const { trackId, clipId } = window.trackManager.selectedClip;
+                    window.trackManager.removeClip(trackId, clipId);
+                }
+            }
+        });
     }
     
     // 新規プロジェクト作成
     createNewProject() {
         // 既存トラックをクリア
-        window.trackManager.clearAllTracks();
-        window.fileManager.clearFileList();
+        if (window.trackManager) {
+            window.trackManager.clearAllTracks();
+        }
+        if (window.fileManager) {
+            window.fileManager.clearFileList();
+        }
         
         // 新規プロジェクト
         const project = window.projectManager.createNewProject();
@@ -121,10 +214,14 @@ class VoiceDramaDAW {
         }
         
         // エフェクトをリセット
-        window.effectsManager.resetAllEffects();
+        if (window.effectsManager && window.effectsManager.resetAllEffects) {
+            window.effectsManager.resetAllEffects();
+        }
         
         // 初期トラック追加
-        window.trackManager.addTrack('メイントラック');
+        if (window.trackManager) {
+            window.trackManager.addTrack('メイントラック');
+        }
     }
     
     // プロジェクト保存
@@ -286,6 +383,10 @@ class VoiceDramaDAW {
             console.log('AudioContext resumed');
         }
         
+        // 再生前にdurationを計算
+        window.audioEngine.calculateDuration();
+        console.log('Duration calculated:', window.audioEngine.duration);
+        
         this.isPlaying = true;
         await window.audioEngine.play(window.audioEngine.currentTime);
         this.startTimeUpdate();
@@ -305,36 +406,53 @@ class VoiceDramaDAW {
         this.isPlaying = false;
         window.audioEngine.stop();
         this.stopTimeUpdate();
+        
+        // currentTimeを0にリセット
+        window.audioEngine.currentTime = 0;
+        
         this.updateTimeDisplay();
         
         // プレイヘッドを0に戻す
         const playhead = document.querySelector('.playhead');
         if (playhead) {
-            playhead.style.left = '0px';
+            const trackHeader = document.querySelector('.track-header');
+            const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+            playhead.style.left = `${headerWidth}px`;
         }
     }
     
     // 時間表示の更新を開始
     startTimeUpdate() {
+        console.log('startTimeUpdate called, isPlaying:', this.isPlaying);
+        
         // プレイヘッドを作成
         this.createPlayhead();
         
         const update = () => {
-            if (!this.isPlaying) return;
-            
-            if (window.audioEngine.audioContext) {
-                window.audioEngine.currentTime += 0.016; // 約60FPS
-                this.updateTimeDisplay();
-                this.updatePlayhead();
-                
-                // 終了チェック
-                if (window.audioEngine.currentTime >= window.audioEngine.duration) {
-                    this.stop();
-                    return;
-                }
+            console.log('update frame, isPlaying:', this.isPlaying);
+            if (!this.isPlaying) {
+                console.log('Animation stopped because isPlaying is false');
+                return;
             }
             
-            this.animationId = requestAnimationFrame(update);
+            try {
+                if (window.audioEngine.audioContext) {
+                    window.audioEngine.currentTime += 0.016; // 約60FPS
+                    this.updateTimeDisplay();
+                    this.updatePlayhead();
+                    
+                    // 終了チェック
+                    if (window.audioEngine.currentTime >= window.audioEngine.duration) {
+                        this.stop();
+                        return;
+                    }
+                }
+                
+                this.animationId = requestAnimationFrame(update);
+            } catch (error) {
+                console.error('Update loop error:', error);
+                this.stop();
+            }
         };
         
         this.animationId = requestAnimationFrame(update);
@@ -357,10 +475,76 @@ class VoiceDramaDAW {
         const tracksContainer = document.getElementById('tracksContainer');
         if (!tracksContainer) return;
         
+        // track-headerの実際の幅を取得
+        const trackHeader = document.querySelector('.track-header');
+        const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+        
         const playhead = document.createElement('div');
         playhead.className = 'playhead';
-        playhead.style.left = '0px'; // tracks-containerを基準に0からスタート
+        playhead.style.left = `${headerWidth}px`;
         tracksContainer.appendChild(playhead);
+        
+        // ドラッグ機能を追加
+        this.setupPlayheadDrag(playhead);
+    }
+    
+    // プレイヘッドのドラッグ機能を設定
+    setupPlayheadDrag(playhead) {
+        let isDragging = false;
+        let wasPlaying = false;
+        
+        const onMouseDown = (e) => {
+            // ▽部分（::before擬似要素）のクリック判定
+            // クリック位置が上部8px以内なら▽部分
+            const rect = playhead.getBoundingClientRect();
+            if (e.clientY > rect.top + 8) return;
+            
+            isDragging = true;
+            wasPlaying = this.isPlaying;
+            
+            // 再生中なら一時停止
+            if (this.isPlaying) {
+                this.pause();
+            }
+            
+            playhead.classList.add('dragging');
+            e.preventDefault();
+        };
+        
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            const tracksContainer = document.getElementById('tracksContainer');
+            const trackHeader = document.querySelector('.track-header');
+            const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+            
+            const rect = tracksContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left - headerWidth;
+            const time = Math.max(0, x / window.trackManager.pixelsPerSecond);
+            
+            // 最大時間を超えないように
+            const maxTime = window.audioEngine.duration;
+            window.audioEngine.currentTime = Math.min(time, maxTime);
+            
+            this.updatePlayhead();
+            this.updateTimeDisplay();
+        };
+        
+        const onMouseUp = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            playhead.classList.remove('dragging');
+            
+            // ドラッグ前に再生中だった場合は再開
+            if (wasPlaying) {
+                this.play();
+            }
+        };
+        
+        playhead.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     }
     
     // プレイヘッドを更新
@@ -368,8 +552,11 @@ class VoiceDramaDAW {
         const playhead = document.querySelector('.playhead');
         if (!playhead) return;
         
-        // tracks-containerを基準にするので、200pxのオフセット不要
-        const leftPos = window.audioEngine.currentTime * window.trackManager.pixelsPerSecond;
+        // track-headerの実際の幅を取得
+        const trackHeader = document.querySelector('.track-header');
+        const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+        
+        const leftPos = headerWidth + (window.audioEngine.currentTime * window.trackManager.pixelsPerSecond);
         playhead.style.left = `${leftPos}px`;
     }
     
