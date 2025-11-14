@@ -598,6 +598,23 @@ body {
     gap: var(--spacing-md);
 }
 
+.eq-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.eq-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-xs);
+}
+
+.eq-preset-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 12px;
+}
+
 .normalize-controls {
     display: flex;
     flex-direction: column;
