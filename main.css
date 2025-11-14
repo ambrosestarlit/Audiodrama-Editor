@@ -154,16 +154,16 @@ body {
 }
 
 .file-item {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
     background: var(--color-bg-secondary);
     border-radius: var(--radius-medium);
     cursor: grab;
     transition: all var(--transition-fast);
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
     border: 2px solid transparent;
-    min-height: 80px; /* トラックの高さに合わせる */
+    min-height: 48px;
 }
 
 .file-item:hover {
@@ -484,8 +484,8 @@ body {
 
 .track-clip {
     position: absolute;
-    height: 60px;
-    top: 10px;
+    height: 70px;
+    top: 5px;
     background: var(--color-accent-light);
     border: 2px solid var(--color-accent);
     border-radius: var(--radius-medium);
@@ -495,7 +495,7 @@ body {
     transition: all var(--transition-fast);
     display: flex;
     align-items: center;
-    padding: var(--spacing-xs);
+    padding: var(--spacing-sm);
 }
 
 .track-clip:hover {
