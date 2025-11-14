@@ -491,8 +491,8 @@ body {
     box-shadow: var(--shadow-small);
     transition: all var(--transition-fast);
     display: flex;
-    align-items: center;
-    padding: var(--spacing-sm);
+    align-items: flex-start; /* 上寄せに変更 */
+    padding: var(--spacing-xs) var(--spacing-sm);
 }
 
 .track-clip:hover {
