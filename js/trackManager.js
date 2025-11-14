@@ -567,18 +567,59 @@ class TrackManager {
         const blockSize = Math.floor(rawData.length / samples);
         const filteredData = [];
         
-        // ゲイン適用
-        const gainDb = clip.gain || 0;
-        const gainLinear = Math.pow(10, gainDb / 20);
+        // クリップゲインを適用
+        const clipGainDb = clip.gain || 0;
+        const clipGainLinear = Math.pow(10, clipGainDb / 20);
+        
+        // トラックエフェクトの影響を計算
+        const audioTrack = window.audioEngine.getTrack(trackId);
+        let effectMultiplier = 1.0;
+        
+        if (audioTrack) {
+            // EQの影響（簡易計算：中域を基準に全体的な音量変化を推定）
+            if (audioTrack.eqEnabled && audioTrack.eq) {
+                const lowGain = audioTrack.eq.low.gain.value;
+                const midGain = audioTrack.eq.mid.gain.value;
+                const highGain = audioTrack.eq.high.gain.value;
+                
+                // 平均的な影響を計算（簡易版）
+                const avgEQGain = (lowGain + midGain + highGain) / 3;
+                const eqMultiplier = Math.pow(10, avgEQGain / 20);
+                effectMultiplier *= eqMultiplier;
+            }
+            
+            // リミッターの影響（閾値を超えた部分を圧縮）
+            // ※波形表示では簡易的に表現
+            if (audioTrack.limiterEnabled && audioTrack.limiter) {
+                // リミッターは圧縮するので、ピークが抑えられる
+                // ここでは視覚的フィードバックとして表現
+            }
+        }
+        
+        // 総合ゲイン
+        const totalGain = clipGainLinear * effectMultiplier;
         
         // ピークを抽出
         for (let i = 0; i < samples; i++) {
             let blockStart = blockSize * i;
             let max = 0;
             for (let j = 0; j < blockSize; j++) {
-                const val = Math.abs(rawData[blockStart + j] || 0) * gainLinear;
+                const val = Math.abs(rawData[blockStart + j] || 0) * totalGain;
                 if (val > max) max = val;
             }
+            
+            // リミッターが有効で閾値を超えている場合は圧縮
+            if (audioTrack && audioTrack.limiterEnabled) {
+                const thresholdLinear = Math.pow(10, audioTrack.limiter.threshold.value / 20);
+                const ratio = audioTrack.limiter.ratio.value;
+                
+                if (max > thresholdLinear) {
+                    // 閾値を超えた分を圧縮
+                    const over = max - thresholdLinear;
+                    max = thresholdLinear + (over / ratio);
+                }
+            }
+            
             filteredData.push(max);
         }
         
@@ -596,7 +637,18 @@ class TrackManager {
             
             // クリッピング検出
             const isClipping = value > 1.0;
-            ctx.fillStyle = isClipping ? 'rgba(214, 115, 115, 0.8)' : 'rgba(139, 111, 71, 0.6)';
+            
+            // リミッターが効いている場合は色を変える
+            let color;
+            if (isClipping) {
+                color = 'rgba(214, 115, 115, 0.8)'; // 赤：クリッピング
+            } else if (audioTrack && audioTrack.limiterEnabled && value > Math.pow(10, audioTrack.limiter.threshold.value / 20)) {
+                color = 'rgba(255, 200, 100, 0.7)'; // オレンジ：リミッター作動中
+            } else {
+                color = 'rgba(139, 111, 71, 0.6)'; // チョコレート：通常
+            }
+            
+            ctx.fillStyle = color;
             
             // 上下対称に描画
             ctx.fillRect(x, middle - barHeight, barWidth - 0.5, barHeight * 2);
