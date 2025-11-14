@@ -230,14 +230,6 @@ class EffectsManager {
                 this.updateTrackClipsWaveforms(this.currentTrackId);
             });
         }
-        
-        // エフェクトパネルを閉じる
-        const closeBtn = document.getElementById('closeEffectsBtn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                this.closePanel();
-            });
-        }
     }
     
     // トラックのリミッター設定を読み込み
