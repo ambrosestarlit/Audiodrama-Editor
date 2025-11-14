@@ -335,19 +335,24 @@ class VoiceDramaDAW {
                 return;
             }
             
-            if (window.audioEngine.audioContext) {
-                window.audioEngine.currentTime += 0.016; // 約60FPS
-                this.updateTimeDisplay();
-                this.updatePlayhead();
-                
-                // 終了チェック
-                if (window.audioEngine.currentTime >= window.audioEngine.duration) {
-                    this.stop();
-                    return;
+            try {
+                if (window.audioEngine.audioContext) {
+                    window.audioEngine.currentTime += 0.016; // 約60FPS
+                    this.updateTimeDisplay();
+                    this.updatePlayhead();
+                    
+                    // 終了チェック
+                    if (window.audioEngine.currentTime >= window.audioEngine.duration) {
+                        this.stop();
+                        return;
+                    }
                 }
+                
+                this.animationId = requestAnimationFrame(update);
+            } catch (error) {
+                console.error('Update loop error:', error);
+                this.stop();
             }
-            
-            this.animationId = requestAnimationFrame(update);
         };
         
         this.animationId = requestAnimationFrame(update);
