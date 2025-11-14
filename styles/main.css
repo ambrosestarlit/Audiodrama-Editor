@@ -438,7 +438,8 @@ body {
 
 .track-clip.selected {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px var(--color-primary);
+    border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.3), var(--shadow-medium);
     z-index: 10;
 }
 
