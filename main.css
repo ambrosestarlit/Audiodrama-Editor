@@ -44,7 +44,7 @@ body {
 }
 
 .app-title {
-    font-size: 22px;
+    font-size: 26px;
     color: var(--color-primary);
     font-weight: normal;
     margin: 0;
@@ -57,7 +57,7 @@ body {
     padding: var(--spacing-xs) var(--spacing-md);
     background: var(--color-bg-secondary);
     border-radius: var(--radius-medium);
-    font-size: 14px;
+    font-size: 17px;
     color: var(--color-text-secondary);
 }
 
@@ -99,7 +99,7 @@ body {
 }
 
 .sidebar-header h2 {
-    font-size: 16px;
+    font-size: 19px;
     color: var(--color-primary);
     margin: 0;
 }
@@ -153,7 +153,7 @@ body {
 }
 
 .file-item-icon {
-    font-size: 18px;
+    font-size: 21px;
 }
 
 .file-item-info {
@@ -165,7 +165,7 @@ body {
 }
 
 .file-item-name {
-    font-size: 13px;
+    font-size: 19px;
     font-weight: normal;
     color: var(--color-text-primary);
     white-space: nowrap;
@@ -174,7 +174,7 @@ body {
 }
 
 .file-item-duration {
-    font-size: 11px;
+    font-size: 17px;
     color: var(--color-text-muted);
 }
 
@@ -224,7 +224,7 @@ body {
     border: none;
     background: transparent; /* 画像を活かすため透過 */
     color: white;
-    font-size: 20px;
+    font-size: 24px;
     cursor: pointer;
     transition: all var(--transition-fast);
     display: flex;
@@ -255,7 +255,7 @@ body {
     background: var(--color-bg-secondary);
     border-radius: var(--radius-medium);
     font-family: 'Courier New', monospace;
-    font-size: 14px;
+    font-size: 17px;
     font-weight: normal;
     color: var(--color-text-primary);
     display: flex;
@@ -318,7 +318,7 @@ body {
     position: absolute;
     top: var(--spacing-xs);
     left: 4px;
-    font-size: 11px;
+    font-size: 17px;
     color: var(--color-text-muted);
     font-family: 'Courier New', monospace;
 }
@@ -399,7 +399,7 @@ body {
 }
 
 .track-name {
-    font-size: 14px;
+    font-size: 17px;
     font-weight: normal;
     color: var(--color-text-primary);
     background: transparent;
@@ -426,7 +426,7 @@ body {
     background: var(--color-bg-secondary);
     border-radius: var(--radius-small);
     cursor: pointer;
-    font-size: 12px;
+    font-size: 21px;
     transition: all var(--transition-fast);
 }
 
@@ -505,7 +505,7 @@ body {
 .clip-name {
     position: relative;
     z-index: 2;
-    font-size: 11px;
+    font-size: 17px;
     font-weight: normal;
     color: var(--color-text-primary);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 8px rgba(255, 255, 255, 0.5);
@@ -548,7 +548,7 @@ body {
 }
 
 .track-count {
-    font-size: 13px;
+    font-size: 19px;
     color: var(--color-text-secondary);
     font-weight: normal;
 }
@@ -581,7 +581,7 @@ body {
 }
 
 .panel-header h2 {
-    font-size: 16px;
+    font-size: 19px;
     color: var(--color-primary);
     margin: 0;
 }
@@ -601,7 +601,7 @@ body {
 }
 
 .effect-section h3 {
-    font-size: 14px;
+    font-size: 17px;
     color: var(--color-primary);
     margin: 0 0 var(--spacing-md) 0;
     font-weight: normal;
@@ -628,7 +628,7 @@ body {
 
 .eq-preset-btn {
     padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: 12px;
+    font-size: 21px;
 }
 
 .normalize-controls {
@@ -645,7 +645,7 @@ body {
 
 .preset-btn {
     flex: 1;
-    font-size: 12px;
+    font-size: 21px;
 }
 
 .normalize-info {
@@ -661,7 +661,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 13px;
+    font-size: 19px;
 }
 
 .info-row span:first-child {
@@ -701,7 +701,7 @@ body {
 
 .clip-gain-popup .popup-header h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 21px;
     color: var(--color-text-primary);
 }
 
@@ -719,7 +719,7 @@ body {
 
 .gain-slider-container label {
     font-weight: normal;
-    font-size: 14px;
+    font-size: 17px;
     color: var(--color-text-secondary);
 }
 
@@ -729,7 +729,7 @@ body {
 
 .gain-value {
     text-align: center;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: normal;
     font-family: 'Courier New', monospace;
     color: var(--color-primary);
@@ -752,7 +752,7 @@ body {
 
 .gain-preset-btn {
     padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: 12px;
+    font-size: 21px;
 }
 
 .eq-band,
@@ -764,7 +764,7 @@ body {
 
 .eq-band label,
 .control-row label {
-    font-size: 12px;
+    font-size: 21px;
     font-weight: normal;
     color: var(--color-text-secondary);
 }
@@ -775,7 +775,7 @@ body {
 
 .eq-value,
 .control-value {
-    font-size: 11px;
+    font-size: 17px;
     color: var(--color-text-muted);
     font-family: 'Courier New', monospace;
     text-align: right;
@@ -814,14 +814,14 @@ body {
 }
 
 .project-item-name {
-    font-size: 15px;
+    font-size: 21px;
     font-weight: normal;
     color: var(--color-text-primary);
     margin-bottom: var(--spacing-xs);
 }
 
 .project-item-meta {
-    font-size: 12px;
+    font-size: 21px;
     color: var(--color-text-muted);
     display: flex;
     gap: var(--spacing-md);
@@ -850,7 +850,7 @@ body {
 }
 
 .option-group label {
-    font-size: 14px;
+    font-size: 17px;
     font-weight: normal;
     color: var(--color-text-primary);
 }
