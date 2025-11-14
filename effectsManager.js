@@ -153,6 +153,75 @@ class EffectsManager {
             });
         });
         
+        // ノイズゲート有効化チェックボックス
+        const noiseGateEnabledCheckbox = document.getElementById('trackNoiseGateEnabled');
+        if (noiseGateEnabledCheckbox) {
+            noiseGateEnabledCheckbox.addEventListener('change', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const enabled = e.target.checked;
+                window.audioEngine.setTrackNoiseGateEnabled(this.currentTrackId, enabled);
+                
+                // スライダーの有効/無効を切り替え
+                const sliders = ['trackNoiseGateThreshold', 'trackNoiseGateAttack', 'trackNoiseGateRelease'];
+                sliders.forEach(id => {
+                    const slider = document.getElementById(id);
+                    if (slider) slider.disabled = !enabled;
+                });
+                
+                // FXボタンの状態を更新
+                this.updateFXButtonState(this.currentTrackId);
+            });
+        }
+        
+        // ノイズゲート - Threshold
+        const noiseGateThreshold = document.getElementById('trackNoiseGateThreshold');
+        if (noiseGateThreshold) {
+            noiseGateThreshold.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackNoiseGate(this.currentTrackId, 'threshold', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value.toFixed(0)} dB`;
+                }
+            });
+        }
+        
+        // ノイズゲート - Attack
+        const noiseGateAttack = document.getElementById('trackNoiseGateAttack');
+        if (noiseGateAttack) {
+            noiseGateAttack.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackNoiseGate(this.currentTrackId, 'attack', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value.toFixed(0)} ms`;
+                }
+            });
+        }
+        
+        // ノイズゲート - Release
+        const noiseGateRelease = document.getElementById('trackNoiseGateRelease');
+        if (noiseGateRelease) {
+            noiseGateRelease.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackNoiseGate(this.currentTrackId, 'release', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value.toFixed(0)} ms`;
+                }
+            });
+        }
+        
         // トラックリミッター有効化チェックボックス
         const enabledCheckbox = document.getElementById('trackLimiterEnabled');
         if (enabledCheckbox) {
@@ -282,6 +351,48 @@ class EffectsManager {
             btn.disabled = !track.eqEnabled;
         });
         
+        // ノイズゲート有効化チェックボックス
+        const noiseGateEnabledCheckbox = document.getElementById('trackNoiseGateEnabled');
+        if (noiseGateEnabledCheckbox) {
+            noiseGateEnabledCheckbox.checked = track.noiseGateEnabled || false;
+        }
+        
+        // ノイズゲート - Threshold
+        const noiseGateThreshold = document.getElementById('trackNoiseGateThreshold');
+        if (noiseGateThreshold) {
+            const value = track.noiseGate.threshold.value;
+            noiseGateThreshold.value = value;
+            noiseGateThreshold.disabled = !track.noiseGateEnabled;
+            const valueDisplay = noiseGateThreshold.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(0)} dB`;
+            }
+        }
+        
+        // ノイズゲート - Attack
+        const noiseGateAttack = document.getElementById('trackNoiseGateAttack');
+        if (noiseGateAttack) {
+            const value = track.noiseGate.attack.value * 1000; // sからmsへ
+            noiseGateAttack.value = value;
+            noiseGateAttack.disabled = !track.noiseGateEnabled;
+            const valueDisplay = noiseGateAttack.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(0)} ms`;
+            }
+        }
+        
+        // ノイズゲート - Release
+        const noiseGateReleaseSlider = document.getElementById('trackNoiseGateRelease');
+        if (noiseGateReleaseSlider) {
+            const value = track.noiseGate.release.value * 1000; // sからmsへ
+            noiseGateReleaseSlider.value = value;
+            noiseGateReleaseSlider.disabled = !track.noiseGateEnabled;
+            const valueDisplay = noiseGateReleaseSlider.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(0)} ms`;
+            }
+        }
+        
         // リミッター有効化チェックボックス
         const enabledCheckbox = document.getElementById('trackLimiterEnabled');
         if (enabledCheckbox) {
@@ -333,8 +444,8 @@ class EffectsManager {
         const fxButton = document.querySelector(`[data-action="effects"][data-track-id="${trackId}"]`);
         if (!fxButton) return;
         
-        // EQまたはリミッターが有効ならアクティブ状態にする
-        const hasEffects = track.eqEnabled || track.limiterEnabled;
+        // EQ、ノイズゲート、またはリミッターが有効ならアクティブ状態にする
+        const hasEffects = track.eqEnabled || track.noiseGateEnabled || track.limiterEnabled;
         
         if (hasEffects) {
             fxButton.classList.add('active');

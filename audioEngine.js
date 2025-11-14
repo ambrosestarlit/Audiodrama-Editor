@@ -131,6 +131,7 @@ class AudioEngine {
             gain: this.audioContext.createGain(),
             pan: this.audioContext.createStereoPanner(),
             limiter: this.audioContext.createDynamicsCompressor(),
+            noiseGate: this.audioContext.createDynamicsCompressor(),
             eq: {
                 low: this.audioContext.createBiquadFilter(),
                 mid: this.audioContext.createBiquadFilter(),
@@ -141,7 +142,8 @@ class AudioEngine {
             volume: 0.8,
             clips: [],
             limiterEnabled: false,
-            eqEnabled: false
+            eqEnabled: false,
+            noiseGateEnabled: false
         };
         
         track.gain.gain.value = track.volume;
@@ -152,6 +154,13 @@ class AudioEngine {
         track.limiter.ratio.value = 20;
         track.limiter.attack.value = 0.003;
         track.limiter.release.value = 0.25;
+        
+        // ノイズゲート設定（Expander風）
+        track.noiseGate.threshold.value = -50;  // -50dB以下をカット
+        track.noiseGate.knee.value = 0;
+        track.noiseGate.ratio.value = 20;       // 高いレシオでゲート効果
+        track.noiseGate.attack.value = 0.003;   // 速いアタック
+        track.noiseGate.release.value = 0.1;    // やや遅めのリリース
         
         // イコライザー設定
         track.eq.low.type = 'lowshelf';
@@ -167,8 +176,9 @@ class AudioEngine {
         track.eq.high.frequency.value = 10000;
         track.eq.high.gain.value = 0;
         
-        // 接続: Track Gain -> Pan -> (EQ) -> (Limiter) -> Master EQ
-        track.gain.connect(track.pan);
+        // 接続: Track Gain -> Noise Gate -> Pan -> (EQ) -> (Limiter) -> Master EQ
+        track.gain.connect(track.noiseGate);
+        track.noiseGate.connect(track.pan);
         // 初期状態ではEQをバイパス
         track.pan.connect(this.eq.low);
         
@@ -382,6 +392,45 @@ class AudioEngine {
             track.eq.high.gain.value = values.high;
             
             return values;
+        }
+    }
+    
+    // ノイズゲート有効化/無効化
+    setTrackNoiseGateEnabled(trackId, enabled) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.noiseGateEnabled = enabled;
+        
+        // 接続を再構築
+        track.gain.disconnect();
+        track.noiseGate.disconnect();
+        
+        if (enabled) {
+            // Gain -> NoiseGate -> Pan
+            track.gain.connect(track.noiseGate);
+            track.noiseGate.connect(track.pan);
+        } else {
+            // Gain -> Pan (ノイズゲートをバイパス)
+            track.gain.connect(track.pan);
+        }
+    }
+    
+    // ノイズゲート設定変更
+    setTrackNoiseGate(trackId, param, value) {
+        const track = this.getTrack(trackId);
+        if (!track || !track.noiseGate) return;
+        
+        switch(param) {
+            case 'threshold':
+                track.noiseGate.threshold.value = value;
+                break;
+            case 'attack':
+                track.noiseGate.attack.value = value / 1000; // msをsに変換
+                break;
+            case 'release':
+                track.noiseGate.release.value = value / 1000; // msをsに変換
+                break;
         }
     }
     

@@ -143,6 +143,32 @@
                         </div>
                     </div>
                     <div class="effect-section">
+                        <h3>ノイズゲート</h3>
+                        <div class="noisegate-controls">
+                            <div class="control-row">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="trackNoiseGateEnabled">
+                                    <span>ノイズゲートを有効化</span>
+                                </label>
+                            </div>
+                            <div class="control-row">
+                                <label>Threshold</label>
+                                <input type="range" id="trackNoiseGateThreshold" min="-60" max="-20" value="-50" step="1" disabled>
+                                <span class="control-value">-50 dB</span>
+                            </div>
+                            <div class="control-row">
+                                <label>Attack</label>
+                                <input type="range" id="trackNoiseGateAttack" min="1" max="50" value="3" step="1" disabled>
+                                <span class="control-value">3 ms</span>
+                            </div>
+                            <div class="control-row">
+                                <label>Release</label>
+                                <input type="range" id="trackNoiseGateRelease" min="50" max="500" value="100" step="10" disabled>
+                                <span class="control-value">100 ms</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="effect-section">
                         <h3>トラックリミッター</h3>
                         <div class="limiter-controls">
                             <div class="control-row">
