@@ -130,16 +130,26 @@ class AudioEngine {
             name: `トラック ${id}`,
             gain: this.audioContext.createGain(),
             pan: this.audioContext.createStereoPanner(),
+            limiter: this.audioContext.createDynamicsCompressor(),
             mute: false,
             solo: false,
             volume: 0.8,
-            clips: []
+            clips: [],
+            limiterEnabled: false
         };
         
         track.gain.gain.value = track.volume;
         
-        // 接続: Track Gain -> Pan -> EQ
+        // リミッター設定（W1 Limiter風）
+        track.limiter.threshold.value = -6;
+        track.limiter.knee.value = 0;
+        track.limiter.ratio.value = 20;
+        track.limiter.attack.value = 0.003;
+        track.limiter.release.value = 0.25;
+        
+        // 接続: Track Gain -> Pan -> (Limiter) -> EQ
         track.gain.connect(track.pan);
+        // 初期状態ではリミッターをバイパス
         track.pan.connect(this.eq.low);
         
         this.tracks.push(track);
@@ -243,6 +253,44 @@ class AudioEngine {
         if (!track) return;
         
         track.pan.pan.value = pan; // -1 (左) から 1 (右)
+    }
+    
+    // トラックリミッターの有効/無効
+    setTrackLimiterEnabled(trackId, enabled) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.limiterEnabled = enabled;
+        
+        // 接続を変更
+        track.pan.disconnect();
+        
+        if (enabled) {
+            // Pan -> Limiter -> EQ
+            track.pan.connect(track.limiter);
+            track.limiter.connect(this.eq.low);
+        } else {
+            // Pan -> EQ (リミッターをバイパス)
+            track.pan.connect(this.eq.low);
+        }
+    }
+    
+    // トラックリミッターのパラメータ設定
+    setTrackLimiter(trackId, param, value) {
+        const track = this.getTrack(trackId);
+        if (!track || !track.limiter) return;
+        
+        switch(param) {
+            case 'threshold':
+                track.limiter.threshold.value = value;
+                break;
+            case 'release':
+                track.limiter.release.value = value / 1000; // msからsへ変換
+                break;
+            case 'ratio':
+                track.limiter.ratio.value = value;
+                break;
+        }
     }
     
     // 再生

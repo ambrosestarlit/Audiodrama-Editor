@@ -88,6 +88,8 @@ class TrackManager {
                             title="ミュート">M</button>
                     <button class="track-btn" data-action="solo" data-track-id="${track.id}" 
                             title="ソロ">S</button>
+                    <button class="track-btn" data-action="effects" data-track-id="${track.id}" 
+                            title="エフェクト">FX</button>
                     <button class="track-btn" data-action="delete" data-track-id="${track.id}" 
                             title="削除">🗑️</button>
                 </div>
@@ -127,6 +129,12 @@ class TrackManager {
             track.solo = !track.solo;
             soloBtn.classList.toggle('active', track.solo);
             window.audioEngine.setTrackSolo(track.id, track.solo);
+        });
+        
+        // エフェクトボタン
+        const effectsBtn = trackElement.querySelector('[data-action="effects"]');
+        effectsBtn.addEventListener('click', () => {
+            window.effectsManager.openTrackEffects(track.id);
         });
         
         // 削除ボタン

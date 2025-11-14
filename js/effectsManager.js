@@ -5,6 +5,7 @@
 class EffectsManager {
     constructor() {
         this.isOpen = false;
+        this.currentTrackId = null;
     }
     
     // 初期化
@@ -14,37 +15,32 @@ class EffectsManager {
     
     // イベントリスナー設定
     setupEventListeners() {
-        // イコライザー
-        const eqSliders = {
-            low: document.getElementById('eqLow'),
-            mid: document.getElementById('eqMid'),
-            high: document.getElementById('eqHigh')
-        };
-        
-        for (const [band, slider] of Object.entries(eqSliders)) {
-            if (!slider) continue;
-            
-            const valueDisplay = slider.nextElementSibling;
-            
-            slider.addEventListener('input', (e) => {
-                const value = parseFloat(e.target.value);
-                window.audioEngine.setEQ(band, value);
+        // トラックリミッター有効化チェックボックス
+        const enabledCheckbox = document.getElementById('trackLimiterEnabled');
+        if (enabledCheckbox) {
+            enabledCheckbox.addEventListener('change', (e) => {
+                if (this.currentTrackId === null) return;
                 
-                if (valueDisplay) {
-                    valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
-                }
+                const enabled = e.target.checked;
+                window.audioEngine.setTrackLimiterEnabled(this.currentTrackId, enabled);
+                
+                // スライダーの有効/無効を切り替え
+                const sliders = ['trackLimiterThreshold', 'trackLimiterRelease', 'trackLimiterRatio'];
+                sliders.forEach(id => {
+                    const slider = document.getElementById(id);
+                    if (slider) slider.disabled = !enabled;
+                });
             });
         }
         
-        // リミッター
-        const limiterThreshold = document.getElementById('limiterThreshold');
-        const limiterRelease = document.getElementById('limiterRelease');
-        const limiterCeiling = document.getElementById('limiterCeiling');
-        
-        if (limiterThreshold) {
-            limiterThreshold.addEventListener('input', (e) => {
+        // トラックリミッター - Threshold
+        const trackThreshold = document.getElementById('trackLimiterThreshold');
+        if (trackThreshold) {
+            trackThreshold.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
                 const value = parseFloat(e.target.value);
-                window.audioEngine.setLimiter('threshold', value);
+                window.audioEngine.setTrackLimiter(this.currentTrackId, 'threshold', value);
                 
                 const valueDisplay = e.target.nextElementSibling;
                 if (valueDisplay) {
@@ -53,10 +49,14 @@ class EffectsManager {
             });
         }
         
-        if (limiterRelease) {
-            limiterRelease.addEventListener('input', (e) => {
+        // トラックリミッター - Release
+        const trackRelease = document.getElementById('trackLimiterRelease');
+        if (trackRelease) {
+            trackRelease.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
                 const value = parseFloat(e.target.value);
-                window.audioEngine.setLimiter('release', value);
+                window.audioEngine.setTrackLimiter(this.currentTrackId, 'release', value);
                 
                 const valueDisplay = e.target.nextElementSibling;
                 if (valueDisplay) {
@@ -65,14 +65,18 @@ class EffectsManager {
             });
         }
         
-        if (limiterCeiling) {
-            limiterCeiling.addEventListener('input', (e) => {
+        // トラックリミッター - Ratio
+        const trackRatio = document.getElementById('trackLimiterRatio');
+        if (trackRatio) {
+            trackRatio.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
                 const value = parseFloat(e.target.value);
-                window.audioEngine.setLimiter('ceiling', value);
+                window.audioEngine.setTrackLimiter(this.currentTrackId, 'ratio', value);
                 
                 const valueDisplay = e.target.nextElementSibling;
                 if (valueDisplay) {
-                    valueDisplay.textContent = `${value.toFixed(1)} dB`;
+                    valueDisplay.textContent = `${value.toFixed(1)}:1`;
                 }
             });
         }
@@ -82,7 +86,56 @@ class EffectsManager {
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
                 this.togglePanel();
+                this.currentTrackId = null;
             });
+        }
+    }
+    
+    // トラックのリミッター設定を読み込み
+    loadTrackLimiterSettings(trackId) {
+        const track = window.audioEngine.getTrack(trackId);
+        if (!track) return;
+        
+        // 有効化チェックボックス
+        const enabledCheckbox = document.getElementById('trackLimiterEnabled');
+        if (enabledCheckbox) {
+            enabledCheckbox.checked = track.limiterEnabled || false;
+        }
+        
+        // Threshold
+        const thresholdSlider = document.getElementById('trackLimiterThreshold');
+        if (thresholdSlider) {
+            const value = track.limiter.threshold.value;
+            thresholdSlider.value = value;
+            thresholdSlider.disabled = !track.limiterEnabled;
+            const valueDisplay = thresholdSlider.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(1)} dB`;
+            }
+        }
+        
+        // Release
+        const releaseSlider = document.getElementById('trackLimiterRelease');
+        if (releaseSlider) {
+            const value = track.limiter.release.value * 1000; // sからmsへ
+            releaseSlider.value = value;
+            releaseSlider.disabled = !track.limiterEnabled;
+            const valueDisplay = releaseSlider.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(0)} ms`;
+            }
+        }
+        
+        // Ratio
+        const ratioSlider = document.getElementById('trackLimiterRatio');
+        if (ratioSlider) {
+            const value = track.limiter.ratio.value;
+            ratioSlider.value = value;
+            ratioSlider.disabled = !track.limiterEnabled;
+            const valueDisplay = ratioSlider.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(1)}:1`;
+            }
         }
     }
     
@@ -93,6 +146,24 @@ class EffectsManager {
         
         this.isOpen = !this.isOpen;
         panel.classList.toggle('open', this.isOpen);
+    }
+    
+    // トラックエフェクトパネルを開く
+    openTrackEffects(trackId) {
+        this.currentTrackId = trackId;
+        const panel = document.getElementById('effectsPanel');
+        const panelHeader = panel.querySelector('.panel-header h2');
+        
+        const track = window.trackManager.getTrack(trackId);
+        if (track) {
+            panelHeader.textContent = `🎛️ エフェクト - ${track.name}`;
+        }
+        
+        this.isOpen = true;
+        panel.classList.add('open');
+        
+        // トラックのリミッター設定を読み込み
+        this.loadTrackLimiterSettings(trackId);
     }
     
     // EQ値をリセット
