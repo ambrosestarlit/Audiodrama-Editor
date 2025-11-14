@@ -15,6 +15,31 @@ class EffectsManager {
     
     // イベントリスナー設定
     setupEventListeners() {
+        // イコライザー有効化チェックボックス
+        const eqEnabledCheckbox = document.getElementById('trackEQEnabled');
+        if (eqEnabledCheckbox) {
+            eqEnabledCheckbox.addEventListener('change', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const enabled = e.target.checked;
+                window.audioEngine.setTrackEQEnabled(this.currentTrackId, enabled);
+                
+                // スライダーとボタンの有効/無効を切り替え
+                const sliders = ['eqLow', 'eqMid', 'eqHigh'];
+                sliders.forEach(id => {
+                    const slider = document.getElementById(id);
+                    if (slider) slider.disabled = !enabled;
+                });
+                
+                document.querySelectorAll('.eq-preset-btn').forEach(btn => {
+                    btn.disabled = !enabled;
+                });
+                
+                // FXボタンの状態を更新
+                this.updateFXButtonState(this.currentTrackId);
+            });
+        }
+        
         // イコライザー - Low
         const eqLow = document.getElementById('eqLow');
         if (eqLow) {
@@ -113,6 +138,9 @@ class EffectsManager {
                     const slider = document.getElementById(id);
                     if (slider) slider.disabled = !enabled;
                 });
+                
+                // FXボタンの状態を更新
+                this.updateFXButtonState(this.currentTrackId);
             });
         }
         
@@ -179,11 +207,18 @@ class EffectsManager {
         const track = window.audioEngine.getTrack(trackId);
         if (!track) return;
         
+        // イコライザー有効化チェックボックス
+        const eqEnabledCheckbox = document.getElementById('trackEQEnabled');
+        if (eqEnabledCheckbox) {
+            eqEnabledCheckbox.checked = track.eqEnabled || false;
+        }
+        
         // イコライザー設定を読み込み
         const eqLow = document.getElementById('eqLow');
         if (eqLow && track.eq) {
             const value = track.eq.low.gain.value;
             eqLow.value = value;
+            eqLow.disabled = !track.eqEnabled;
             const valueDisplay = eqLow.nextElementSibling;
             if (valueDisplay) {
                 valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
@@ -194,6 +229,7 @@ class EffectsManager {
         if (eqMid && track.eq) {
             const value = track.eq.mid.gain.value;
             eqMid.value = value;
+            eqMid.disabled = !track.eqEnabled;
             const valueDisplay = eqMid.nextElementSibling;
             if (valueDisplay) {
                 valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
@@ -204,13 +240,19 @@ class EffectsManager {
         if (eqHigh && track.eq) {
             const value = track.eq.high.gain.value;
             eqHigh.value = value;
+            eqHigh.disabled = !track.eqEnabled;
             const valueDisplay = eqHigh.nextElementSibling;
             if (valueDisplay) {
                 valueDisplay.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)} dB`;
             }
         }
         
-        // 有効化チェックボックス
+        // EQプリセットボタンも無効化
+        document.querySelectorAll('.eq-preset-btn').forEach(btn => {
+            btn.disabled = !track.eqEnabled;
+        });
+        
+        // リミッター有効化チェックボックス
         const enabledCheckbox = document.getElementById('trackLimiterEnabled');
         if (enabledCheckbox) {
             enabledCheckbox.checked = track.limiterEnabled || false;
@@ -253,6 +295,24 @@ class EffectsManager {
         }
     }
     
+    // FXボタンの状態を更新
+    updateFXButtonState(trackId) {
+        const track = window.audioEngine.getTrack(trackId);
+        if (!track) return;
+        
+        const fxButton = document.querySelector(`[data-action="effects"][data-track-id="${trackId}"]`);
+        if (!fxButton) return;
+        
+        // EQまたはリミッターが有効ならアクティブ状態にする
+        const hasEffects = track.eqEnabled || track.limiterEnabled;
+        
+        if (hasEffects) {
+            fxButton.classList.add('active');
+        } else {
+            fxButton.classList.remove('active');
+        }
+    }
+    
     // パネルの開閉
     togglePanel() {
         const panel = document.getElementById('effectsPanel');
@@ -279,6 +339,9 @@ class EffectsManager {
         
         // トラックのリミッター設定を読み込み
         this.loadTrackLimiterSettings(trackId);
+        
+        // FXボタンの状態を更新
+        this.updateFXButtonState(trackId);
     }
     
     // EQ値をリセット
