@@ -291,6 +291,10 @@ class VoiceDramaDAW {
             console.log('AudioContext resumed');
         }
         
+        // 再生前にdurationを計算
+        window.audioEngine.calculateDuration();
+        console.log('Duration calculated:', window.audioEngine.duration);
+        
         this.isPlaying = true;
         await window.audioEngine.play(window.audioEngine.currentTime);
         this.startTimeUpdate();
