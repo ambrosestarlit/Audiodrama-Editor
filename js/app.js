@@ -427,6 +427,68 @@ class VoiceDramaDAW {
         playhead.className = 'playhead';
         playhead.style.left = `${headerWidth}px`;
         tracksContainer.appendChild(playhead);
+        
+        // ドラッグ機能を追加
+        this.setupPlayheadDrag(playhead);
+    }
+    
+    // プレイヘッドのドラッグ機能を設定
+    setupPlayheadDrag(playhead) {
+        let isDragging = false;
+        let wasPlaying = false;
+        
+        const onMouseDown = (e) => {
+            // ▽部分（::before擬似要素）のクリック判定
+            // クリック位置が上部8px以内なら▽部分
+            const rect = playhead.getBoundingClientRect();
+            if (e.clientY > rect.top + 8) return;
+            
+            isDragging = true;
+            wasPlaying = this.isPlaying;
+            
+            // 再生中なら一時停止
+            if (this.isPlaying) {
+                this.pause();
+            }
+            
+            playhead.classList.add('dragging');
+            e.preventDefault();
+        };
+        
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            const tracksContainer = document.getElementById('tracksContainer');
+            const trackHeader = document.querySelector('.track-header');
+            const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+            
+            const rect = tracksContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left - headerWidth;
+            const time = Math.max(0, x / window.trackManager.pixelsPerSecond);
+            
+            // 最大時間を超えないように
+            const maxTime = window.audioEngine.duration;
+            window.audioEngine.currentTime = Math.min(time, maxTime);
+            
+            this.updatePlayhead();
+            this.updateTimeDisplay();
+        };
+        
+        const onMouseUp = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            playhead.classList.remove('dragging');
+            
+            // ドラッグ前に再生中だった場合は再開
+            if (wasPlaying) {
+                this.play();
+            }
+        };
+        
+        playhead.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     }
     
     // プレイヘッドを更新
