@@ -2,6 +2,15 @@
    テーマカラー設定
    ========================================== */
 
+/* カスタムフォント */
+@font-face {
+    font-family: 'BananaSlip';
+    src: url('YDWbananaslipplus.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     /* プライマリカラー（チョコレート系） */
     --color-primary: #5C4033;        /* 濃いチョコレート */
