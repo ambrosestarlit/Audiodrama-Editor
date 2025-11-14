@@ -319,6 +319,18 @@ body {
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
     border-top: 8px solid var(--color-danger);
+    cursor: grab;
+    pointer-events: auto; /* ▽部分だけクリック可能に */
+    padding: 4px; /* クリック範囲を広げる */
+    margin: -4px; /* paddingで広げた分を戻す */
+}
+
+.playhead.dragging::before {
+    cursor: grabbing;
+}
+
+.playhead.dragging {
+    opacity: 0.8;
 }
 
 /* timeline-areaのトラックヘッダー部分をマスク */
