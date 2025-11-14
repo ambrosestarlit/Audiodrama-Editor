@@ -161,7 +161,7 @@ class AudioEngine {
         
         // ノイズリダクション設定（ハイパスフィルター）
         track.noiseReduction.highpass.type = 'highpass';
-        track.noiseReduction.highpass.frequency.value = track.noiseReduction.cutoffFreq;
+        track.noiseReduction.highpass.frequency.value = 20; // 初期は20Hz(ほぼ無効)
         track.noiseReduction.highpass.Q.value = track.noiseReduction.resonance;
         
         // イコライザー設定
@@ -404,17 +404,12 @@ class AudioEngine {
         
         track.noiseReductionEnabled = enabled;
         
-        // 接続を再構築
-        track.gain.disconnect();
-        track.noiseReduction.highpass.disconnect();
-        
         if (enabled) {
-            // Gain -> NoiseReduction -> Pan
-            track.gain.connect(track.noiseReduction.highpass);
-            track.noiseReduction.highpass.connect(track.pan);
+            // 有効化: 設定されたカットオフ周波数に
+            track.noiseReduction.highpass.frequency.value = track.noiseReduction.cutoffFreq;
         } else {
-            // Gain -> Pan (バイパス)
-            track.gain.connect(track.pan);
+            // 無効化: 20Hzに下げてほぼバイパス
+            track.noiseReduction.highpass.frequency.value = 20;
         }
     }
     
