@@ -4,28 +4,28 @@
 
 :root {
     /* プライマリカラー（チョコレート系） */
-    --color-primary: #8B6F47;
-    --color-primary-light: #A0855B;
-    --color-primary-dark: #6B5637;
+    --color-primary: #5C4033;        /* 濃いチョコレート */
+    --color-primary-light: #8B6F47;  /* ミルクチョコレート */
+    --color-primary-dark: #3D2817;   /* ダークチョコレート */
     
-    /* アクセントカラー（ビスケット/ベージュ系） */
-    --color-accent: #D4A574;
-    --color-accent-light: #E8C9A1;
-    --color-accent-dark: #B88A5F;
+    /* アクセントカラー（ビスケット系） */
+    --color-accent: #E7D4B5;         /* ビスケット（指定色） */
+    --color-accent-light: #F5EBD8;   /* 明るいビスケット */
+    --color-accent-dark: #D4B896;    /* 焼き目のビスケット */
     
-    /* 背景色 */
-    --color-bg-primary: #FFF9F0;
-    --color-bg-secondary: #FFF4E6;
-    --color-bg-tertiary: #FFEFD5;
+    /* 背景色（優しいビスケット系） */
+    --color-bg-primary: #FAF6F0;     /* ほんのり温かみのある白 */
+    --color-bg-secondary: #F5EBD8;   /* 明るいビスケット */
+    --color-bg-tertiary: #E7D4B5;    /* ビスケット */
     
-    /* テキストカラー */
-    --color-text-primary: #4A3728;
-    --color-text-secondary: #6B5637;
-    --color-text-muted: #8B7355;
+    /* テキストカラー（チョコレート系） */
+    --color-text-primary: #3D2817;   /* ダークチョコレート */
+    --color-text-secondary: #5C4033; /* チョコレート */
+    --color-text-muted: #8B6F47;     /* ミルクチョコレート */
     
-    /* ボーダー */
-    --color-border: #D4A574;
-    --color-border-light: #E8C9A1;
+    /* ボーダー（ビスケット系） */
+    --color-border: #D4B896;         /* 焼き目のビスケット */
+    --color-border-light: #E7D4B5;   /* ビスケット */
     
     /* 状態色 */
     --color-success: #7BAF6F;
@@ -33,10 +33,10 @@
     --color-danger: #D67373;
     --color-info: #6FA3B8;
     
-    /* シャドウ */
-    --shadow-small: 0 2px 4px rgba(139, 111, 71, 0.1);
-    --shadow-medium: 0 4px 12px rgba(139, 111, 71, 0.15);
-    --shadow-large: 0 8px 24px rgba(139, 111, 71, 0.2);
+    /* シャドウ（チョコレート系） */
+    --shadow-small: 0 2px 4px rgba(61, 40, 23, 0.1);
+    --shadow-medium: 0 4px 12px rgba(61, 40, 23, 0.15);
+    --shadow-large: 0 8px 24px rgba(61, 40, 23, 0.2);
     
     /* 角丸 */
     --radius-small: 8px;
