@@ -604,8 +604,12 @@ class VoiceDramaDAW {
                         }
                     }
                     
-                    // ファイルマネージャーに追加
-                    window.fileManager.addFileFromData({
+                    // ファイルマネージャーに追加（renderFileListを呼ばない）
+                    if (!window.fileManager.files[category]) {
+                        window.fileManager.files[category] = [];
+                    }
+                    
+                    window.fileManager.files[category].push({
                         id: fileId,
                         name: originalName,
                         category: category,
@@ -620,6 +624,11 @@ class VoiceDramaDAW {
             });
             
             await Promise.all(filePromises);
+            
+            // ファイルリストUIを更新（もし更新関数があれば）
+            if (typeof window.fileManager.updateAllFileLists === 'function') {
+                window.fileManager.updateAllFileLists();
+            }
             
             // プロジェクトデータから項目を復元
             if (this.pendingProject) {
