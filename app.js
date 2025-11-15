@@ -305,56 +305,63 @@ class VoiceDramaDAW {
                 bitDepth: project.bitDepth || 24,
                 
                 // トラック情報（素材は参照のみ）
-                tracks: window.trackManager.tracks.map(track => ({
-                    id: track.id,
-                    name: track.name || '',
-                    volume: track.volume ?? 1.0,
-                    mute: track.mute ?? false,
-                    solo: track.solo ?? false,
+                tracks: window.trackManager.tracks.map(track => {
+                    // audioEngineのトラックを取得
+                    const audioTrack = window.audioEngine.getTrack(track.id);
                     
-                    // トラックEQ設定
-                    eqEnabled: track.eqEnabled ?? false,
-                    eq: {
-                        low: track.eq?.low?.gain?.value ?? 0,
-                        mid: track.eq?.mid?.gain?.value ?? 0,
-                        high: track.eq?.high?.gain?.value ?? 0
-                    },
-                    
-                    // トラックリミッター設定
-                    limiterEnabled: track.limiterEnabled ?? false,
-                    limiter: {
-                        threshold: track.limiter?.threshold?.value ?? -6,
-                        release: track.limiter?.release?.value ?? 250,
-                        ratio: track.limiter?.ratio?.value ?? 20
-                    },
-                    
-                    // ノイズリダクション設定
-                    noiseReduction: {
-                        highpassEnabled: track.highpassEnabled ?? false,
-                        highpassFrequency: track.highpassFilter?.frequency?.value ?? 80,
-                        lowpassEnabled: track.lowpassEnabled ?? false,
-                        lowpassFrequency: track.lowpassFilter?.frequency?.value ?? 8000
-                    },
-                    
-                    // エクスパンダー設定
-                    expanderEnabled: track.expanderEnabled ?? false,
-                    expander: {
-                        threshold: track.expander?.threshold?.value ?? -40,
-                        ratio: track.expander?.ratio?.value ?? 2,
-                        release: track.expander?.release?.value ?? 250
-                    },
-                    
-                    clips: track.clips.map(clip => ({
-                        id: clip.id,
-                        fileId: clip.fileId,
-                        startTime: clip.startTime ?? 0,
-                        duration: clip.duration ?? 0,
-                        offset: clip.offset ?? 0,
-                        gain: clip.gain ?? 0,
-                        fadeIn: clip.fadeIn ?? 0,
-                        fadeOut: clip.fadeOut ?? 0
-                    }))
-                })),
+                    return {
+                        id: track.id,
+                        name: track.name || '',
+                        volume: track.volume ?? 1.0,
+                        mute: track.mute ?? false,
+                        solo: track.solo ?? false,
+                        
+                        // トラックEQ設定（audioEngineから取得）
+                        eqEnabled: audioTrack?.eqEnabled ?? false,
+                        eq: {
+                            low: audioTrack?.eq?.low?.gain?.value ?? 0,
+                            mid: audioTrack?.eq?.mid?.gain?.value ?? 0,
+                            high: audioTrack?.eq?.high?.gain?.value ?? 0
+                        },
+                        
+                        // トラックリミッター設定（audioEngineから取得、msに変換）
+                        limiterEnabled: audioTrack?.limiterEnabled ?? false,
+                        limiter: {
+                            threshold: audioTrack?.limiter?.threshold?.value ?? -6,
+                            release: (audioTrack?.limiter?.release?.value ?? 0.25) * 1000,
+                            ratio: audioTrack?.limiter?.ratio?.value ?? 20
+                        },
+                        
+                        // ノイズリダクション設定（audioEngineから取得）
+                        noiseReduction: {
+                            highpassEnabled: audioTrack?.noiseReduction?.highpassEnabled ?? false,
+                            highpassFrequency: audioTrack?.noiseReduction?.highpassCutoff ?? 80,
+                            highpassResonance: audioTrack?.noiseReduction?.highpassResonance ?? 0.7,
+                            lowpassEnabled: audioTrack?.noiseReduction?.lowpassEnabled ?? false,
+                            lowpassFrequency: audioTrack?.noiseReduction?.lowpassCutoff ?? 8000,
+                            lowpassResonance: audioTrack?.noiseReduction?.lowpassResonance ?? 0.7
+                        },
+                        
+                        // エクスパンダー設定（audioEngineから取得、msに変換）
+                        expanderEnabled: audioTrack?.expanderEnabled ?? false,
+                        expander: {
+                            threshold: audioTrack?.expander?.threshold?.value ?? -40,
+                            ratio: audioTrack?.expander?.ratio?.value ?? 0.5,
+                            release: (audioTrack?.expander?.release?.value ?? 0.25) * 1000
+                        },
+                        
+                        clips: track.clips.map(clip => ({
+                            id: clip.id,
+                            fileId: clip.fileId,
+                            startTime: clip.startTime ?? 0,
+                            duration: clip.duration ?? 0,
+                            offset: clip.offset ?? 0,
+                            gain: clip.gain ?? 0,
+                            fadeIn: clip.fadeIn ?? 0,
+                            fadeOut: clip.fadeOut ?? 0
+                        }))
+                    };
+                }),
                 
                 // 素材メタデータ（本体は含めない）
                 audioFiles: window.fileManager.getAllFiles().map(file => ({
@@ -695,6 +702,10 @@ class VoiceDramaDAW {
                     const volumeSlider = document.querySelector(`.volume-slider[data-track-id="${track.id}"]`);
                     if (volumeSlider) {
                         volumeSlider.value = track.volume;
+                        // スライダーの進捗バーも更新
+                        if (window.updateSliderProgress) {
+                            window.updateSliderProgress(volumeSlider);
+                        }
                     }
                     const volumeValue = document.querySelector(`[data-track-id="${track.id}"]`)?.querySelector('.volume-value');
                     if (volumeValue) {
@@ -702,40 +713,67 @@ class VoiceDramaDAW {
                     }
                     window.audioEngine.setTrackVolume(track.id, track.volume);
                     
-                    // トラックEQ設定を復元
-                    track.eqEnabled = trackData.eqEnabled ?? false;
-                    if (trackData.eq && track.eq) {
-                        if (track.eq.low?.gain) track.eq.low.gain.value = trackData.eq.low ?? 0;
-                        if (track.eq.mid?.gain) track.eq.mid.gain.value = trackData.eq.mid ?? 0;
-                        if (track.eq.high?.gain) track.eq.high.gain.value = trackData.eq.high ?? 0;
-                    }
+                    // audioEngineのトラックを取得
+                    const audioTrack = window.audioEngine.getTrack(track.id);
                     
-                    // トラックリミッター設定を復元
-                    track.limiterEnabled = trackData.limiterEnabled ?? false;
-                    if (trackData.limiter && track.limiter) {
-                        if (track.limiter.threshold) track.limiter.threshold.value = trackData.limiter.threshold ?? -6;
-                        if (track.limiter.release) track.limiter.release.value = trackData.limiter.release ?? 250;
-                        if (track.limiter.ratio) track.limiter.ratio.value = trackData.limiter.ratio ?? 20;
-                    }
-                    
-                    // ノイズリダクション設定を復元
-                    if (trackData.noiseReduction) {
-                        track.highpassEnabled = trackData.noiseReduction.highpassEnabled ?? false;
-                        if (track.highpassFilter?.frequency) {
-                            track.highpassFilter.frequency.value = trackData.noiseReduction.highpassFrequency ?? 80;
+                    if (audioTrack) {
+                        // トラックEQ設定を復元
+                        audioTrack.eqEnabled = trackData.eqEnabled ?? false;
+                        if (trackData.eq) {
+                            if (audioTrack.eq.low?.gain) audioTrack.eq.low.gain.value = trackData.eq.low ?? 0;
+                            if (audioTrack.eq.mid?.gain) audioTrack.eq.mid.gain.value = trackData.eq.mid ?? 0;
+                            if (audioTrack.eq.high?.gain) audioTrack.eq.high.gain.value = trackData.eq.high ?? 0;
                         }
-                        track.lowpassEnabled = trackData.noiseReduction.lowpassEnabled ?? false;
-                        if (track.lowpassFilter?.frequency) {
-                            track.lowpassFilter.frequency.value = trackData.noiseReduction.lowpassFrequency ?? 8000;
+                        window.audioEngine.setTrackEQEnabled(track.id, audioTrack.eqEnabled);
+                        
+                        // トラックリミッター設定を復元
+                        audioTrack.limiterEnabled = trackData.limiterEnabled ?? false;
+                        if (trackData.limiter) {
+                            if (audioTrack.limiter.threshold) audioTrack.limiter.threshold.value = trackData.limiter.threshold ?? -6;
+                            if (audioTrack.limiter.release) audioTrack.limiter.release.value = (trackData.limiter.release ?? 250) / 1000;
+                            if (audioTrack.limiter.ratio) audioTrack.limiter.ratio.value = trackData.limiter.ratio ?? 20;
                         }
-                    }
-                    
-                    // エクスパンダー設定を復元
-                    track.expanderEnabled = trackData.expanderEnabled ?? false;
-                    if (trackData.expander && track.expander) {
-                        if (track.expander.threshold) track.expander.threshold.value = trackData.expander.threshold ?? -40;
-                        if (track.expander.ratio) track.expander.ratio.value = trackData.expander.ratio ?? 2;
-                        if (track.expander.release) track.expander.release.value = trackData.expander.release ?? 250;
+                        window.audioEngine.setTrackLimiterEnabled(track.id, audioTrack.limiterEnabled);
+                        
+                        // ノイズリダクション設定を復元
+                        audioTrack.noiseReductionEnabled = trackData.noiseReduction?.highpassEnabled || trackData.noiseReduction?.lowpassEnabled || false;
+                        if (trackData.noiseReduction) {
+                            audioTrack.noiseReduction.highpassEnabled = trackData.noiseReduction.highpassEnabled ?? false;
+                            audioTrack.noiseReduction.lowpassEnabled = trackData.noiseReduction.lowpassEnabled ?? false;
+                            
+                            if (audioTrack.noiseReduction.highpass?.frequency) {
+                                const freq = trackData.noiseReduction.highpassFrequency ?? 80;
+                                audioTrack.noiseReduction.highpass.frequency.value = freq;
+                                audioTrack.noiseReduction.highpassCutoff = freq;
+                            }
+                            if (audioTrack.noiseReduction.lowpass?.frequency) {
+                                const freq = trackData.noiseReduction.lowpassFrequency ?? 8000;
+                                audioTrack.noiseReduction.lowpass.frequency.value = freq;
+                                audioTrack.noiseReduction.lowpassCutoff = freq;
+                            }
+                            if (trackData.noiseReduction.highpassResonance !== undefined) {
+                                audioTrack.noiseReduction.highpassResonance = trackData.noiseReduction.highpassResonance;
+                                if (audioTrack.noiseReduction.highpass?.Q) {
+                                    audioTrack.noiseReduction.highpass.Q.value = trackData.noiseReduction.highpassResonance;
+                                }
+                            }
+                            if (trackData.noiseReduction.lowpassResonance !== undefined) {
+                                audioTrack.noiseReduction.lowpassResonance = trackData.noiseReduction.lowpassResonance;
+                                if (audioTrack.noiseReduction.lowpass?.Q) {
+                                    audioTrack.noiseReduction.lowpass.Q.value = trackData.noiseReduction.lowpassResonance;
+                                }
+                            }
+                        }
+                        window.audioEngine.setTrackNoiseReductionEnabled(track.id, audioTrack.noiseReductionEnabled);
+                        
+                        // エクスパンダー設定を復元
+                        audioTrack.expanderEnabled = trackData.expanderEnabled ?? false;
+                        if (trackData.expander) {
+                            if (audioTrack.expander.threshold) audioTrack.expander.threshold.value = trackData.expander.threshold ?? -40;
+                            if (audioTrack.expander.ratio) audioTrack.expander.ratio.value = trackData.expander.ratio ?? 0.5;
+                            if (audioTrack.expander.release) audioTrack.expander.release.value = (trackData.expander.release ?? 250) / 1000;
+                        }
+                        window.audioEngine.setTrackExpanderEnabled(track.id, audioTrack.expanderEnabled);
                     }
                     
                     // クリップを復元
@@ -748,6 +786,12 @@ class VoiceDramaDAW {
                                 clip.gain = clipData.gain ?? 0;
                                 clip.fadeIn = clipData.fadeIn ?? 0;
                                 clip.fadeOut = clipData.fadeOut ?? 0;
+                                
+                                // audioEngineのクリップにもゲインを設定
+                                const audioClip = audioTrack?.clips.find(c => c.id === clip.id);
+                                if (audioClip) {
+                                    audioClip.gain = clip.gain;
+                                }
                             }
                         } else {
                             console.warn(`素材が見つかりません: ${clipData.fileId}`);
