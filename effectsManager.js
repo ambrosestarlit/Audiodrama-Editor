@@ -684,8 +684,8 @@ class EffectsManager {
             toggleBtn.innerHTML = '<img src="open.png" alt="開く" class="toggle-icon">';
             toggleBtn.type = 'button';
             
-            // ヘッダーの前にボタンを挿入
-            header.parentNode.insertBefore(toggleBtn, header);
+            // h3の最初の子要素として挿入
+            header.insertBefore(toggleBtn, header.firstChild);
             
             // 折りたたみ状態を管理
             let isCollapsed = false;

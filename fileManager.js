@@ -430,6 +430,43 @@ class FileManager {
             this.drawWaveform(file, gainDb);
         }
     }
+    
+    // IDでファイルを取得
+    getFileById(fileId) {
+        const allFiles = this.getAllFiles();
+        return allFiles.find(f => f.id === fileId);
+    }
+    
+    // データからファイルを追加（プロジェクト読み込み用）
+    addFileFromData(fileData) {
+        // カテゴリ別のファイルリストに追加
+        if (!this.files[fileData.category]) {
+            this.files[fileData.category] = [];
+        }
+        
+        this.files[fileData.category].push(fileData);
+        
+        // UIを更新
+        this.renderFileList(fileData.category);
+        
+        return fileData;
+    }
+    
+    // 全ファイルをクリア
+    clearAllFiles() {
+        this.files = {
+            dialogue: [],
+            sfx: [],
+            bgm: [],
+            ambience: [],
+            effects: []
+        };
+        
+        // 全てのカテゴリのUIを更新
+        Object.keys(this.files).forEach(category => {
+            this.renderFileList(category);
+        });
+    }
 }
 
 // グローバルインスタンス

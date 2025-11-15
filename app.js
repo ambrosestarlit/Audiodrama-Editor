@@ -287,8 +287,39 @@ class VoiceDramaDAW {
             }
             
             // 現在の状態を保存
-            project.tracks = window.trackManager.tracks;
-            project.audioFiles = window.fileManager.exportFileList();
+            project.tracks = window.trackManager.tracks.map(track => ({
+                ...track,
+                clips: track.clips.map(clip => ({
+                    id: clip.id,
+                    fileId: clip.fileId,
+                    startTime: clip.startTime,
+                    duration: clip.duration,
+                    offset: clip.offset,
+                    gain: clip.gain,
+                    fadeIn: clip.fadeIn,
+                    fadeOut: clip.fadeOut
+                }))
+            }));
+            
+            // audioFilesをシリアライズ可能な形式に変換
+            const fileList = window.fileManager.exportFileList();
+            project.audioFiles = await Promise.all(fileList.map(async file => {
+                // AudioBufferをArrayBufferに変換
+                const audioBufferData = this.serializeAudioBuffer(file.audioBuffer);
+                
+                return {
+                    id: file.id,
+                    name: file.name,
+                    category: file.category,
+                    duration: file.duration,
+                    sampleRate: file.sampleRate,
+                    numberOfChannels: file.numberOfChannels,
+                    fileType: file.fileType,
+                    size: file.size,
+                    audioBufferData: audioBufferData // シリアライズされたオーディオデータ
+                };
+            }));
+            
             project.effectSettings = window.effectsManager.getEffectSettings();
             project.zoom = window.trackManager.pixelsPerSecond;
             
@@ -296,8 +327,42 @@ class VoiceDramaDAW {
             alert('プロジェクトを保存しました');
         } catch (error) {
             console.error('Save project error:', error);
-            alert('プロジェクトの保存に失敗しました');
+            alert(`プロジェクトの保存に失敗しました: ${error.message}`);
         }
+    }
+    
+    // AudioBufferをシリアライズ可能な形式に変換
+    serializeAudioBuffer(audioBuffer) {
+        const numberOfChannels = audioBuffer.numberOfChannels;
+        const length = audioBuffer.length;
+        const sampleRate = audioBuffer.sampleRate;
+        
+        const channels = [];
+        for (let i = 0; i < numberOfChannels; i++) {
+            channels.push(audioBuffer.getChannelData(i));
+        }
+        
+        return {
+            numberOfChannels: numberOfChannels,
+            length: length,
+            sampleRate: sampleRate,
+            channels: channels
+        };
+    }
+    
+    // シリアライズされたデータからAudioBufferを復元
+    deserializeAudioBuffer(data) {
+        const audioBuffer = window.audioEngine.audioContext.createBuffer(
+            data.numberOfChannels,
+            data.length,
+            data.sampleRate
+        );
+        
+        for (let i = 0; i < data.numberOfChannels; i++) {
+            audioBuffer.copyToChannel(new Float32Array(data.channels[i]), i);
+        }
+        
+        return audioBuffer;
     }
     
     // プロジェクト読み込みモーダルを開く
@@ -383,10 +448,36 @@ class VoiceDramaDAW {
             // トラックをクリア
             window.trackManager.clearAllTracks();
             
+            // ファイルをクリア
+            window.fileManager.clearAllFiles();
+            
             // プロジェクト名を表示
             const projectNameElement = document.getElementById('projectName');
             if (projectNameElement) {
                 projectNameElement.textContent = project.name;
+            }
+            
+            // オーディオファイルを復元
+            if (project.audioFiles) {
+                for (const fileData of project.audioFiles) {
+                    // AudioBufferを復元
+                    const audioBuffer = this.deserializeAudioBuffer(fileData.audioBufferData);
+                    
+                    // ファイルマネージャーに追加
+                    const file = {
+                        id: fileData.id,
+                        name: fileData.name,
+                        category: fileData.category,
+                        duration: fileData.duration,
+                        sampleRate: fileData.sampleRate,
+                        numberOfChannels: fileData.numberOfChannels,
+                        fileType: fileData.fileType,
+                        size: fileData.size,
+                        audioBuffer: audioBuffer
+                    };
+                    
+                    window.fileManager.addFileFromData(file);
+                }
             }
             
             // トラックを復元
@@ -400,9 +491,15 @@ class VoiceDramaDAW {
                         
                         // クリップを復元
                         for (const clipData of trackData.clips) {
-                            const audioFile = await window.fileManager.getAudioFile(clipData.fileId);
+                            const audioFile = window.fileManager.getFileById(clipData.fileId);
                             if (audioFile) {
-                                await window.trackManager.addClip(track.id, audioFile, clipData.startTime);
+                                const clip = await window.trackManager.addClip(track.id, audioFile, clipData.startTime);
+                                if (clip) {
+                                    clip.offset = clipData.offset || 0;
+                                    clip.gain = clipData.gain || 0;
+                                    clip.fadeIn = clipData.fadeIn || 0;
+                                    clip.fadeOut = clipData.fadeOut || 0;
+                                }
                             }
                         }
                     }
@@ -419,10 +516,16 @@ class VoiceDramaDAW {
                 window.trackManager.setZoom(project.zoom);
             }
             
+            // モーダルを閉じる
+            const modal = document.getElementById('projectModal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+            
             alert('プロジェクトを読み込みました');
         } catch (error) {
             console.error('Load project error:', error);
-            alert('プロジェクトの読み込みに失敗しました');
+            alert(`プロジェクトの読み込みに失敗しました: ${error.message}`);
         }
     }
     
