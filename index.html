@@ -201,6 +201,37 @@
                         </div>
                     </div>
                     <div class="effect-section">
+                        <h3>エキスパンダー（ノイズ軽減）</h3>
+                        <div class="expander-controls">
+                            <div class="control-row">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="trackExpanderEnabled">
+                                    <span>エキスパンダーを有効化</span>
+                                </label>
+                            </div>
+                            <div class="control-row">
+                                <label>Threshold（閾値）</label>
+                                <input type="range" id="trackExpanderThreshold" min="-60" max="-20" value="-40" step="1" disabled>
+                                <span class="control-value">-40 dB</span>
+                            </div>
+                            <div class="control-row">
+                                <label>Ratio（比率）</label>
+                                <input type="range" id="trackExpanderRatio" min="0.1" max="1" value="0.5" step="0.05" disabled>
+                                <span class="control-value">0.50</span>
+                            </div>
+                            <div class="control-row">
+                                <label>Release</label>
+                                <input type="range" id="trackExpanderRelease" min="50" max="500" value="250" step="10" disabled>
+                                <span class="control-value">250 ms</span>
+                            </div>
+                            <div class="expander-info">
+                                💡 ゲインを上げた音声の"サー"というノイズを軽減<br>
+                                💡 Threshold以下の小さい音をさらに小さくします<br>
+                                💡 Ratioが小さいほど強力な効果
+                            </div>
+                        </div>
+                    </div>
+                    <div class="effect-section">
                         <h3>トラックリミッター</h3>
                         <div class="limiter-controls">
                             <div class="control-row">

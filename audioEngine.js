@@ -131,6 +131,7 @@ class AudioEngine {
             gain: this.audioContext.createGain(),
             pan: this.audioContext.createStereoPanner(),
             limiter: this.audioContext.createDynamicsCompressor(),
+            expander: this.audioContext.createDynamicsCompressor(),
             noiseReduction: {
                 highpass: this.audioContext.createBiquadFilter(),
                 lowpass: this.audioContext.createBiquadFilter(),
@@ -152,7 +153,8 @@ class AudioEngine {
             clips: [],
             limiterEnabled: false,
             eqEnabled: false,
-            noiseReductionEnabled: false
+            noiseReductionEnabled: false,
+            expanderEnabled: false
         };
         
         track.gain.gain.value = track.volume;
@@ -163,6 +165,13 @@ class AudioEngine {
         track.limiter.ratio.value = 20;
         track.limiter.attack.value = 0.003;
         track.limiter.release.value = 0.25;
+        
+        // エキスパンダー設定（ノイズ軽減用）
+        track.expander.threshold.value = -40; // この音量以下を小さくする
+        track.expander.knee.value = 10; // ソフトニー（自然な効果）
+        track.expander.ratio.value = 0.5; // 1以下で拡張（小さい音をさらに小さく）
+        track.expander.attack.value = 0.003;
+        track.expander.release.value = 0.25;
         
         // ノイズリダクション設定（ハイパスフィルター）
         track.noiseReduction.highpass.type = 'highpass';
@@ -188,8 +197,9 @@ class AudioEngine {
         track.eq.high.frequency.value = 10000;
         track.eq.high.gain.value = 0;
         
-        // 接続: Track Gain -> Highpass -> Lowpass -> Pan -> (EQ) -> (Limiter) -> Master EQ
-        track.gain.connect(track.noiseReduction.highpass);
+        // 接続: Track Gain -> Expander -> Highpass -> Lowpass -> Pan -> (EQ) -> (Limiter) -> Master EQ
+        track.gain.connect(track.expander);
+        track.expander.connect(track.noiseReduction.highpass);
         track.noiseReduction.highpass.connect(track.noiseReduction.lowpass);
         track.noiseReduction.lowpass.connect(track.pan);
         // 初期状態ではEQをバイパス
@@ -560,6 +570,70 @@ class AudioEngine {
                 frequency: track.noiseReduction.lowpass.frequency.value,
                 Q: track.noiseReduction.lowpass.Q.value
             }
+        });
+    }
+    
+    // エキスパンダー有効化/無効化
+    setTrackExpanderEnabled(trackId, enabled) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        track.expanderEnabled = enabled;
+        
+        console.log('🎚️ Expander:', {
+            trackId: trackId,
+            enabled: enabled,
+            threshold: track.expander.threshold.value,
+            ratio: track.expander.ratio.value
+        });
+        
+        // エキスパンダーの有効/無効を切り替え
+        // DynamicsCompressorは常に接続されているので、パラメータで制御
+        if (!enabled) {
+            // 無効時はバイパス状態（ratio=1で圧縮なし）
+            track.expander.ratio.value = 1;
+        } else {
+            // 有効時は設定されたratioを適用（デフォルト0.5）
+            track.expander.ratio.value = 0.5;
+        }
+    }
+    
+    // エキスパンダーのパラメータ設定
+    setTrackExpander(trackId, param, value) {
+        const track = this.getTrack(trackId);
+        if (!track || !track.expander) return;
+        
+        console.log('🔧 Expander Parameter Change:', {
+            trackId: trackId,
+            param: param,
+            value: value
+        });
+        
+        switch(param) {
+            case 'threshold':
+                track.expander.threshold.value = value;
+                break;
+            case 'ratio':
+                // ratioは0.1～1.0の範囲（1以下で拡張効果）
+                track.expander.ratio.value = value;
+                break;
+            case 'attack':
+                track.expander.attack.value = value / 1000; // msからsへ変換
+                break;
+            case 'release':
+                track.expander.release.value = value / 1000; // msからsへ変換
+                break;
+            case 'knee':
+                track.expander.knee.value = value;
+                break;
+        }
+        
+        console.log('🔊 Current expander state:', {
+            threshold: track.expander.threshold.value,
+            ratio: track.expander.ratio.value,
+            attack: track.expander.attack.value,
+            release: track.expander.release.value,
+            knee: track.expander.knee.value
         });
     }
     

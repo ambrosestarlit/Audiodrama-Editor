@@ -322,6 +322,75 @@ class EffectsManager {
             });
         }
         
+        // エキスパンダー有効化チェックボックス
+        const expanderEnabledCheckbox = document.getElementById('trackExpanderEnabled');
+        if (expanderEnabledCheckbox) {
+            expanderEnabledCheckbox.addEventListener('change', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const enabled = e.target.checked;
+                window.audioEngine.setTrackExpanderEnabled(this.currentTrackId, enabled);
+                
+                // スライダーの有効/無効を切り替え
+                const sliders = ['trackExpanderThreshold', 'trackExpanderRatio', 'trackExpanderRelease'];
+                sliders.forEach(id => {
+                    const slider = document.getElementById(id);
+                    if (slider) slider.disabled = !enabled;
+                });
+                
+                // FXボタンの状態を更新
+                this.updateFXButtonState(this.currentTrackId);
+            });
+        }
+        
+        // エキスパンダー - Threshold
+        const expanderThreshold = document.getElementById('trackExpanderThreshold');
+        if (expanderThreshold) {
+            expanderThreshold.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackExpander(this.currentTrackId, 'threshold', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value.toFixed(0)} dB`;
+                }
+            });
+        }
+        
+        // エキスパンダー - Ratio
+        const expanderRatio = document.getElementById('trackExpanderRatio');
+        if (expanderRatio) {
+            expanderRatio.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackExpander(this.currentTrackId, 'ratio', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = value.toFixed(2);
+                }
+            });
+        }
+        
+        // エキスパンダー - Release
+        const expanderRelease = document.getElementById('trackExpanderRelease');
+        if (expanderRelease) {
+            expanderRelease.addEventListener('input', (e) => {
+                if (this.currentTrackId === null) return;
+                
+                const value = parseFloat(e.target.value);
+                window.audioEngine.setTrackExpander(this.currentTrackId, 'release', value);
+                
+                const valueDisplay = e.target.nextElementSibling;
+                if (valueDisplay) {
+                    valueDisplay.textContent = `${value.toFixed(0)} ms`;
+                }
+            });
+        }
+        
         // トラックリミッター - Threshold
         const trackThreshold = document.getElementById('trackLimiterThreshold');
         if (trackThreshold) {
@@ -536,6 +605,48 @@ class EffectsManager {
                 valueDisplay.textContent = `${value.toFixed(1)}:1`;
             }
         }
+        
+        // エキスパンダー有効化チェックボックス
+        const expanderEnabledCheckbox = document.getElementById('trackExpanderEnabled');
+        if (expanderEnabledCheckbox) {
+            expanderEnabledCheckbox.checked = track.expanderEnabled || false;
+        }
+        
+        // エキスパンダー - Threshold
+        const expanderThresholdSlider = document.getElementById('trackExpanderThreshold');
+        if (expanderThresholdSlider) {
+            const value = track.expander.threshold.value;
+            expanderThresholdSlider.value = value;
+            expanderThresholdSlider.disabled = !track.expanderEnabled;
+            const valueDisplay = expanderThresholdSlider.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(0)} dB`;
+            }
+        }
+        
+        // エキスパンダー - Ratio
+        const expanderRatioSlider = document.getElementById('trackExpanderRatio');
+        if (expanderRatioSlider) {
+            const value = track.expanderEnabled ? track.expander.ratio.value : 0.5;
+            expanderRatioSlider.value = value;
+            expanderRatioSlider.disabled = !track.expanderEnabled;
+            const valueDisplay = expanderRatioSlider.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = value.toFixed(2);
+            }
+        }
+        
+        // エキスパンダー - Release
+        const expanderReleaseSlider = document.getElementById('trackExpanderRelease');
+        if (expanderReleaseSlider) {
+            const value = track.expander.release.value * 1000; // sからmsへ
+            expanderReleaseSlider.value = value;
+            expanderReleaseSlider.disabled = !track.expanderEnabled;
+            const valueDisplay = expanderReleaseSlider.nextElementSibling;
+            if (valueDisplay) {
+                valueDisplay.textContent = `${value.toFixed(0)} ms`;
+            }
+        }
     }
     
     // FXボタンの状態を更新
@@ -546,8 +657,8 @@ class EffectsManager {
         const fxButton = document.querySelector(`[data-action="effects"][data-track-id="${trackId}"]`);
         if (!fxButton) return;
         
-        // EQ、ノイズゲート、またはリミッターが有効ならアクティブ状態にする
-        const hasEffects = track.eqEnabled || track.noiseReductionEnabled || track.limiterEnabled;
+        // EQ、ノイズリダクション、エキスパンダー、またはリミッターが有効ならアクティブ状態にする
+        const hasEffects = track.eqEnabled || track.noiseReductionEnabled || track.expanderEnabled || track.limiterEnabled;
         
         if (hasEffects) {
             fxButton.classList.add('active');
