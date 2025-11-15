@@ -569,8 +569,13 @@ class VoiceDramaDAW {
                 throw new Error('ZIPファイル内にassetsフォルダが見つかりません');
             }
             
-            // 既存の素材をクリア
-            window.fileManager.clearAllFiles();
+            // 既存の素材をクリア（renderFileListを呼ばない方法で）
+            window.fileManager.files = {
+                voice: [],
+                bgm: [],
+                ambience: [],
+                effects: []
+            };
             
             // ZIPから素材を抽出
             const filePromises = [];
