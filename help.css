@@ -2,100 +2,9 @@
  * help.css - Sound Bearヘルプシステムスタイル
  */
 
-/* ヘルプオーバーレイ */
-.help-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(8px);
-    z-index: 10000;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    animation: fadeIn 0.3s ease;
-}
-
-.help-overlay.active {
-    display: flex;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-/* ヘルプウィンドウ */
-.help-window {
-    background: linear-gradient(135deg, #4a2c2a 0%, #3d2622 100%);
-    border: 2px solid #8b6f47;
-    border-radius: 16px;
+/* ヘルプモーダル専用スタイル */
+.modal-help {
     max-width: 900px;
-    width: 100%;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(30px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* ヘルプヘッダー */
-.help-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 2px solid #8b6f47;
-    background: linear-gradient(135deg, #5a3c3a 0%, #4a2c2a 100%);
-    border-radius: 14px 14px 0 0;
-}
-
-.help-header h2 {
-    font-size: 24px;
-    font-weight: bold;
-    color: #f5deb3;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.help-header .btn-close {
-    background: #8b4513;
-    color: #fff;
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    font-size: 20px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.help-header .btn-close:hover {
-    background: #a0522d;
-    transform: scale(1.05);
 }
 
 /* ヘルプタブ */
@@ -103,42 +12,44 @@
     display: flex;
     gap: 4px;
     padding: 16px 24px 0;
-    background: #3d2622;
+    background: var(--color-bg-secondary);
     overflow-x: auto;
+    border-bottom: 2px solid var(--color-border-light);
 }
 
-.help-tab {
+.help-tab-btn {
     padding: 12px 20px;
-    background: #2d1a18;
-    border: 2px solid #5a3c3a;
-    border-radius: 8px 8px 0 0;
-    color: #d4a574;
+    background: white;
+    border: 2px solid var(--color-border-light);
+    border-radius: var(--radius-medium) var(--radius-medium) 0 0;
+    color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     white-space: nowrap;
     border-bottom: none;
 }
 
-.help-tab:hover {
-    background: #3d2622;
-    color: #f5deb3;
+.help-tab-btn:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
 }
 
-.help-tab.active {
-    background: #4a2c2a;
-    color: #f5deb3;
-    border-color: #8b6f47;
-    border-bottom: 2px solid #4a2c2a;
+.help-tab-btn.active {
+    background: white;
+    color: var(--color-primary);
+    border-color: var(--color-accent);
+    border-bottom: 2px solid white;
+    position: relative;
+    bottom: -2px;
 }
 
 /* ヘルプコンテンツエリア */
-.help-body {
-    flex: 1;
-    overflow-y: auto;
+.help-content-area {
     padding: 24px;
-    background: #4a2c2a;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 .help-content {
@@ -163,7 +74,7 @@
 
 .help-content h3 {
     font-size: 20px;
-    color: #f5deb3;
+    color: var(--color-primary);
     margin: 0 0 20px 0;
     display: flex;
     align-items: center;
@@ -172,20 +83,20 @@
 
 .help-content h4 {
     font-size: 16px;
-    color: #d4a574;
+    color: var(--color-accent);
     margin: 16px 0 12px 0;
     font-weight: 600;
 }
 
 .help-content p {
-    color: #d4c4a8;
+    color: var(--color-text-primary);
     line-height: 1.8;
     margin: 12px 0;
 }
 
 .help-content ul,
 .help-content ol {
-    color: #d4c4a8;
+    color: var(--color-text-primary);
     line-height: 1.8;
     margin: 12px 0;
     padding-left: 24px;
@@ -196,15 +107,15 @@
 }
 
 .help-content strong {
-    color: #f5deb3;
+    color: var(--color-primary);
     font-weight: 600;
 }
 
 /* ヘルプセクション */
 .help-section {
-    background: #3d2622;
-    border: 2px solid #5a3c3a;
-    border-radius: 12px;
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-border-light);
+    border-radius: var(--radius-large);
     padding: 20px;
     margin-bottom: 20px;
 }
@@ -219,16 +130,15 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 24px;
-    border-top: 2px solid #8b6f47;
-    background: #3d2622;
-    border-radius: 0 0 14px 14px;
+    border-top: 2px solid var(--color-border-light);
+    background: var(--color-bg-secondary);
 }
 
 .help-footer .checkbox-label {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #d4a574;
+    color: var(--color-text-secondary);
     font-size: 14px;
     cursor: pointer;
 }
@@ -240,22 +150,22 @@
 }
 
 /* スクロールバーのスタイル */
-.help-body::-webkit-scrollbar {
+.help-content-area::-webkit-scrollbar {
     width: 12px;
 }
 
-.help-body::-webkit-scrollbar-track {
-    background: #2d1a18;
+.help-content-area::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
     border-radius: 6px;
 }
 
-.help-body::-webkit-scrollbar-thumb {
-    background: #8b6f47;
+.help-content-area::-webkit-scrollbar-thumb {
+    background: var(--color-accent);
     border-radius: 6px;
 }
 
-.help-body::-webkit-scrollbar-thumb:hover {
-    background: #a0826a;
+.help-content-area::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
 }
 
 /* ヘルプボタン */
@@ -263,22 +173,22 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #8b6f47 0%, #6b5437 100%);
-    color: #fff;
-    border: 2px solid #a0826a;
+    background: var(--color-accent);
+    color: white;
+    border: none;
     font-size: 20px;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition-fast);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .btn-help:hover {
-    background: linear-gradient(135deg, #a0826a 0%, #8b6f47 100%);
+    background: var(--color-primary);
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(139, 111, 71, 0.4);
+    box-shadow: var(--shadow-medium);
 }
 
 .btn-help:active {
@@ -287,35 +197,23 @@
 
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
-    .help-overlay {
-        padding: 10px;
-    }
-    
-    .help-window {
+    .modal-help {
+        width: 95%;
         max-height: 95vh;
-        border-radius: 12px;
-    }
-    
-    .help-header {
-        padding: 16px;
-        border-radius: 10px 10px 0 0;
-    }
-    
-    .help-header h2 {
-        font-size: 20px;
     }
     
     .help-tabs {
         padding: 12px 16px 0;
     }
     
-    .help-tab {
+    .help-tab-btn {
         padding: 10px 16px;
         font-size: 13px;
     }
     
-    .help-body {
+    .help-content-area {
         padding: 16px;
+        max-height: 70vh;
     }
     
     .help-content h3 {
@@ -342,11 +240,7 @@
 }
 
 @media (max-width: 480px) {
-    .help-header h2 {
-        font-size: 18px;
-    }
-    
-    .help-tab {
+    .help-tab-btn {
         padding: 8px 12px;
         font-size: 12px;
     }

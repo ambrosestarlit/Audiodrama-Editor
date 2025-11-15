@@ -23,7 +23,7 @@ class HelpSystem {
     
     setup() {
         // 要素の取得
-        this.helpOverlay = document.getElementById('helpOverlay');
+        this.helpOverlay = document.getElementById('helpModal');
         this.helpBtn = document.getElementById('helpBtn');
         
         if (!this.helpOverlay || !this.helpBtn) {
@@ -43,7 +43,7 @@ class HelpSystem {
         this.helpBtn.addEventListener('click', () => this.show());
         
         // 閉じるボタン（ヘッダー）
-        const closeBtn = this.helpOverlay.querySelector('.btn-close');
+        const closeBtn = document.getElementById('closeHelpModal');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => this.hide());
         }
@@ -55,7 +55,7 @@ class HelpSystem {
         }
         
         // タブ切り替え
-        const helpTabs = this.helpOverlay.querySelectorAll('.help-tab');
+        const helpTabs = this.helpOverlay.querySelectorAll('.help-tab-btn');
         helpTabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
                 const tabName = e.target.dataset.helpTab;
@@ -114,7 +114,7 @@ class HelpSystem {
         this.currentTab = tabName;
         
         // タブボタンのアクティブ状態を更新
-        const helpTabs = this.helpOverlay.querySelectorAll('.help-tab');
+        const helpTabs = this.helpOverlay.querySelectorAll('.help-tab-btn');
         helpTabs.forEach(tab => {
             if (tab.dataset.helpTab === tabName) {
                 tab.classList.add('active');
