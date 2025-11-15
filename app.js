@@ -311,8 +311,39 @@ class VoiceDramaDAW {
                     volume: track.volume ?? 0.8,
                     mute: track.mute ?? false,
                     solo: track.solo ?? false,
+                    
+                    // トラックEQ設定
                     eqEnabled: track.eqEnabled ?? false,
+                    eq: {
+                        low: track.eq?.low?.gain?.value ?? 0,
+                        mid: track.eq?.mid?.gain?.value ?? 0,
+                        high: track.eq?.high?.gain?.value ?? 0
+                    },
+                    
+                    // トラックリミッター設定
                     limiterEnabled: track.limiterEnabled ?? false,
+                    limiter: {
+                        threshold: track.limiter?.threshold?.value ?? -6,
+                        release: track.limiter?.release?.value ?? 250,
+                        ratio: track.limiter?.ratio?.value ?? 20
+                    },
+                    
+                    // ノイズリダクション設定
+                    noiseReduction: {
+                        highpassEnabled: track.highpassEnabled ?? false,
+                        highpassFrequency: track.highpassFilter?.frequency?.value ?? 80,
+                        lowpassEnabled: track.lowpassEnabled ?? false,
+                        lowpassFrequency: track.lowpassFilter?.frequency?.value ?? 8000
+                    },
+                    
+                    // エクスパンダー設定
+                    expanderEnabled: track.expanderEnabled ?? false,
+                    expander: {
+                        threshold: track.expander?.threshold?.value ?? -40,
+                        ratio: track.expander?.ratio?.value ?? 2,
+                        release: track.expander?.release?.value ?? 250
+                    },
+                    
                     clips: track.clips.map(clip => ({
                         id: clip.id,
                         fileId: clip.fileId,
@@ -405,7 +436,7 @@ class VoiceDramaDAW {
         for (const file of fileList) {
             if (file.audioBuffer && file.category) {
                 const wavBlob = this.audioBufferToWavBlob(file.audioBuffer);
-                const fileName = `${file.id}_${file.name}.wav`;
+                const fileName = `${file.name}.wav`;
                 const folder = categoryFolders[file.category];
                 if (folder) {
                     folder.file(fileName, wavBlob);
@@ -616,10 +647,8 @@ class VoiceDramaDAW {
                     const fileName = pathParts[pathParts.length - 1];
                     
                     const promise = zipEntry.async('blob').then(async blob => {
-                        // ファイル名からIDと名前を抽出（id_name.wav形式）
-                        const match = fileName.match(/^(.+?)_(.+?)\.wav$/);
-                        const fileId = match ? match[1] : fileName;
-                        const originalName = match ? match[2] : fileName.replace('.wav', '');
+                        // ファイル名から拡張子を除いた名前を取得
+                        const originalName = fileName.replace('.wav', '');
                         
                         // BlobからFileオブジェクトを作成
                         const mimeType = 'audio/wav';
@@ -661,8 +690,42 @@ class VoiceDramaDAW {
                     track.volume = trackData.volume ?? 0.8;
                     track.mute = trackData.mute ?? false;
                     track.solo = trackData.solo ?? false;
+                    
+                    // トラックEQ設定を復元
                     track.eqEnabled = trackData.eqEnabled ?? false;
+                    if (trackData.eq && track.eq) {
+                        if (track.eq.low?.gain) track.eq.low.gain.value = trackData.eq.low ?? 0;
+                        if (track.eq.mid?.gain) track.eq.mid.gain.value = trackData.eq.mid ?? 0;
+                        if (track.eq.high?.gain) track.eq.high.gain.value = trackData.eq.high ?? 0;
+                    }
+                    
+                    // トラックリミッター設定を復元
                     track.limiterEnabled = trackData.limiterEnabled ?? false;
+                    if (trackData.limiter && track.limiter) {
+                        if (track.limiter.threshold) track.limiter.threshold.value = trackData.limiter.threshold ?? -6;
+                        if (track.limiter.release) track.limiter.release.value = trackData.limiter.release ?? 250;
+                        if (track.limiter.ratio) track.limiter.ratio.value = trackData.limiter.ratio ?? 20;
+                    }
+                    
+                    // ノイズリダクション設定を復元
+                    if (trackData.noiseReduction) {
+                        track.highpassEnabled = trackData.noiseReduction.highpassEnabled ?? false;
+                        if (track.highpassFilter?.frequency) {
+                            track.highpassFilter.frequency.value = trackData.noiseReduction.highpassFrequency ?? 80;
+                        }
+                        track.lowpassEnabled = trackData.noiseReduction.lowpassEnabled ?? false;
+                        if (track.lowpassFilter?.frequency) {
+                            track.lowpassFilter.frequency.value = trackData.noiseReduction.lowpassFrequency ?? 8000;
+                        }
+                    }
+                    
+                    // エクスパンダー設定を復元
+                    track.expanderEnabled = trackData.expanderEnabled ?? false;
+                    if (trackData.expander && track.expander) {
+                        if (track.expander.threshold) track.expander.threshold.value = trackData.expander.threshold ?? -40;
+                        if (track.expander.ratio) track.expander.ratio.value = trackData.expander.ratio ?? 2;
+                        if (track.expander.release) track.expander.release.value = trackData.expander.release ?? 250;
+                    }
                     
                     // クリップを復元
                     for (const clipData of trackData.clips) {
