@@ -928,17 +928,17 @@ body {
 
 /* すべてのスライダーに共通のスタイル */
 input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    height: 6px;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    height: 6px !important;
     background: linear-gradient(to right, 
         var(--color-accent) 0%, 
         var(--color-accent) 50%, 
         var(--color-border-medium) 50%, 
-        var(--color-border-medium) 100%);
-    border-radius: 3px;
-    outline: none;
-    transition: background 0.2s;
+        var(--color-border-medium) 100%) !important;
+    border-radius: 3px !important;
+    outline: none !important;
+    transition: background 0.2s !important;
 }
 
 input[type="range"]:hover {
@@ -946,80 +946,85 @@ input[type="range"]:hover {
         var(--color-primary) 0%, 
         var(--color-primary) 50%, 
         var(--color-border-dark) 50%, 
-        var(--color-border-dark) 100%);
+        var(--color-border-dark) 100%) !important;
 }
 
 /* Webkit（Chrome, Safari, Edge）用のつまみ */
 input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 24px;
-    height: 24px;
-    background-image: url('slider-thumb.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    cursor: pointer;
-    border: none;
-    transition: transform 0.2s;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 28px !important;
+    height: 28px !important;
+    background-color: transparent !important;
+    background-image: url('slider-thumb.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    cursor: pointer !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    transition: transform 0.2s !important;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
+    transform: scale(1.2) !important;
 }
 
 input[type="range"]::-webkit-slider-thumb:active {
-    transform: scale(1.1);
+    transform: scale(1.1) !important;
 }
 
 /* Firefox用のつまみ */
 input[type="range"]::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
-    background-image: url('slider-thumb.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    cursor: pointer;
-    border: none;
-    border-radius: 0;
-    transition: transform 0.2s;
+    width: 28px !important;
+    height: 28px !important;
+    background-color: transparent !important;
+    background-image: url('slider-thumb.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    cursor: pointer !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    transition: transform 0.2s !important;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
-    transform: scale(1.2);
+    transform: scale(1.2) !important;
 }
 
 input[type="range"]::-moz-range-thumb:active {
-    transform: scale(1.1);
+    transform: scale(1.1) !important;
 }
 
 /* Firefox用のトラック */
 input[type="range"]::-moz-range-track {
-    height: 6px;
-    background: var(--color-border-medium);
-    border-radius: 3px;
+    height: 6px !important;
+    background: var(--color-border-medium) !important;
+    border-radius: 3px !important;
 }
 
 input[type="range"]::-moz-range-progress {
-    height: 6px;
-    background: var(--color-accent);
-    border-radius: 3px;
+    height: 6px !important;
+    background: var(--color-accent) !important;
+    border-radius: 3px !important;
 }
 
 /* 無効状態 */
 input[type="range"]:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
 }
 
 input[type="range"]:disabled::-webkit-slider-thumb {
-    cursor: not-allowed;
-    transform: none;
+    cursor: not-allowed !important;
+    transform: none !important;
 }
 
 input[type="range"]:disabled::-moz-range-thumb {
-    cursor: not-allowed;
-    transform: none;
+    cursor: not-allowed !important;
+    transform: none !important;
 }
 
