@@ -34,6 +34,58 @@ class ProjectManager {
             this.currentProject.updatedAt = new Date().toISOString();
         }
     }
+    
+    // ==========================================
+    // 互換性維持用のダミー関数
+    // (IndexedDBを使わないため、何もしない)
+    // ==========================================
+    
+    async saveAudioFile(fileData) {
+        // IndexedDBを使わないため、何もしない
+        // fileManager.jsとの互換性維持のため空関数として残す
+        console.log('saveAudioFile called (no-op):', fileData.id);
+        return Promise.resolve(fileData);
+    }
+    
+    async getAudioFile(fileId) {
+        console.log('getAudioFile called (no-op):', fileId);
+        return Promise.resolve(null);
+    }
+    
+    async getAudioFilesByCategory(category) {
+        console.log('getAudioFilesByCategory called (no-op):', category);
+        return Promise.resolve([]);
+    }
+    
+    async getAllAudioFiles() {
+        console.log('getAllAudioFiles called (no-op)');
+        return Promise.resolve([]);
+    }
+    
+    async deleteAudioFile(fileId) {
+        console.log('deleteAudioFile called (no-op):', fileId);
+        return Promise.resolve();
+    }
+    
+    downloadProjectAsJSON(project = null) {
+        const proj = project || this.currentProject;
+        if (!proj) {
+            alert('ダウンロードするプロジェクトがありません');
+            return;
+        }
+        
+        const jsonData = JSON.stringify(proj, null, 2);
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${proj.name}_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
 }
 
 // グローバルインスタンス
