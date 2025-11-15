@@ -6,6 +6,7 @@ class VoiceDramaDAW {
     constructor() {
         this.isPlaying = false;
         this.animationId = null;
+        this.pendingProject = null; // 素材ZIP読み込み待ちのプロジェクト
     }
     
     // 初期化
@@ -31,15 +32,6 @@ class VoiceDramaDAW {
             }
             
             // 各マネージャーの初期化
-            try {
-                console.log('Initializing projectManager...');
-                await window.projectManager.init();
-                console.log('✓ projectManager initialized');
-            } catch (error) {
-                console.error('✗ projectManager initialization failed:', error);
-                throw error;
-            }
-            
             try {
                 console.log('Initializing fileManager...');
                 window.fileManager.init();
@@ -99,7 +91,7 @@ class VoiceDramaDAW {
         });
         
         document.getElementById('loadProjectBtn')?.addEventListener('click', () => {
-            this.openLoadProjectModal();
+            this.openLoadProjectDialog();
         });
         
         // クリップゲイン調整ポップアップ
@@ -286,55 +278,95 @@ class VoiceDramaDAW {
                 return;
             }
             
-            // 現在の状態を保存（素材とAudioNodeは除外）
-            project.tracks = window.trackManager.tracks.map(track => ({
-                id: track.id,
-                name: track.name,
-                volume: track.volume,
-                mute: track.mute,
-                solo: track.solo,
-                clips: track.clips.map(clip => ({
-                    id: clip.id,
-                    fileId: clip.fileId,
-                    startTime: clip.startTime,
-                    duration: clip.duration,
-                    offset: clip.offset,
-                    gain: clip.gain,
-                    fadeIn: clip.fadeIn,
-                    fadeOut: clip.fadeOut
-                }))
-            }));
+            // プロジェクト名を入力
+            const projectName = prompt('プロジェクト名を入力してください:', project.name);
+            if (!projectName) return; // キャンセル
             
-            // 素材のメタデータのみ保存（AudioBufferは含めない）
-            const fileList = window.fileManager.getAllFiles();
-            project.audioFiles = fileList.map(file => ({
-                id: file.id,
-                name: file.name,
-                category: file.category,
-                duration: file.duration,
-                sampleRate: file.sampleRate,
-                numberOfChannels: file.numberOfChannels
-            }));
+            // ファイル名として使えない文字を除去
+            const safeName = projectName.replace(/[<>:"/\\|?*]/g, '_');
             
-            project.effectSettings = window.effectsManager.getEffectSettings();
-            project.zoom = window.trackManager.pixelsPerSecond;
+            // プロジェクト名を更新
+            project.name = safeName;
+            window.projectManager.updateProjectName(safeName);
             
-            // JSON化できるかテスト（デバッグ用）
+            // プロジェクト名を表示
+            const projectNameElement = document.getElementById('projectName');
+            if (projectNameElement) {
+                projectNameElement.textContent = safeName;
+            }
+            
+            // 現在の状態を保存（素材本体は含めない）
+            const projectData = {
+                version: '1.0',
+                projectName: safeName,
+                createdAt: project.createdAt,
+                updatedAt: new Date().toISOString(),
+                sampleRate: project.sampleRate || 48000,
+                bitDepth: project.bitDepth || 24,
+                
+                // トラック情報（素材は参照のみ）
+                tracks: window.trackManager.tracks.map(track => ({
+                    id: track.id,
+                    name: track.name || '',
+                    volume: track.volume ?? 0.8,
+                    mute: track.mute ?? false,
+                    solo: track.solo ?? false,
+                    eqEnabled: track.eqEnabled ?? false,
+                    limiterEnabled: track.limiterEnabled ?? false,
+                    clips: track.clips.map(clip => ({
+                        id: clip.id,
+                        fileId: clip.fileId,
+                        startTime: clip.startTime ?? 0,
+                        duration: clip.duration ?? 0,
+                        offset: clip.offset ?? 0,
+                        gain: clip.gain ?? 0,
+                        fadeIn: clip.fadeIn ?? 0,
+                        fadeOut: clip.fadeOut ?? 0
+                    }))
+                })),
+                
+                // 素材メタデータ（本体は含めない）
+                audioFiles: window.fileManager.getAllFiles().map(file => ({
+                    id: file.id,
+                    name: file.name || '',
+                    category: file.category || 'other',
+                    duration: file.duration ?? 0,
+                    sampleRate: file.sampleRate ?? 48000,
+                    numberOfChannels: file.numberOfChannels ?? 2
+                })),
+                
+                // エフェクト設定
+                effectSettings: window.effectsManager.getEffectSettings() || {},
+                
+                // ズーム設定
+                zoom: window.trackManager.pixelsPerSecond ?? 100
+            };
+            
+            // JSON化テスト
             try {
-                JSON.stringify(project);
-                console.log('✅ Project is serializable');
+                JSON.stringify(projectData);
+                console.log('✅ Project data is serializable');
             } catch (e) {
-                console.error('❌ Project cannot be serialized:', e);
+                console.error('❌ Project data cannot be serialized:', e);
                 throw new Error('プロジェクトデータに保存できないオブジェクトが含まれています');
             }
             
-            // IndexedDBに保存
-            await window.projectManager.saveProject(project);
+            // プロジェクトJSONをダウンロード
+            const projectBlob = new Blob([JSON.stringify(projectData, null, 2)], { 
+                type: 'application/json' 
+            });
+            const projectUrl = URL.createObjectURL(projectBlob);
+            const projectLink = document.createElement('a');
+            projectLink.href = projectUrl;
+            projectLink.download = `${safeName}.json`;
+            projectLink.click();
+            URL.revokeObjectURL(projectUrl);
             
             // 素材をZIPでダウンロード
-            await this.downloadAudioFilesAsZip(project.name, fileList);
+            const fileList = window.fileManager.getAllFiles();
+            await this.downloadAudioFilesAsZip(safeName, fileList);
             
-            alert('プロジェクトを保存しました\n素材ZIPファイルもダウンロードされました');
+            alert(`プロジェクト「${safeName}」を保存しました\n\n以下のファイルがダウンロードされました:\n・${safeName}.json\n・${safeName}_素材.zip`);
         } catch (error) {
             console.error('Save project error:', error);
             alert(`プロジェクトの保存に失敗しました: ${error.message}`);
@@ -343,7 +375,10 @@ class VoiceDramaDAW {
     
     // 素材をZIPでダウンロード
     async downloadAudioFilesAsZip(projectName, fileList) {
-        if (fileList.length === 0) return;
+        if (fileList.length === 0) {
+            console.log('No audio files to save');
+            return;
+        }
         
         // JSZipライブラリを使用（CDNから動的ロード）
         if (!window.JSZip) {
@@ -357,13 +392,14 @@ class VoiceDramaDAW {
         }
         
         const zip = new JSZip();
+        const assetsFolder = zip.folder('assets');
         
         // 各ファイルをWAV形式でZIPに追加
         for (const file of fileList) {
             if (file.audioBuffer) {
                 const wavBlob = this.audioBufferToWavBlob(file.audioBuffer);
                 const fileName = `${file.id}_${file.name}.wav`;
-                zip.file(fileName, wavBlob);
+                assetsFolder.file(fileName, wavBlob);
             }
         }
         
@@ -433,227 +469,210 @@ class VoiceDramaDAW {
         return new Blob([buffer], { type: 'audio/wav' });
     }
     
-    // プロジェクト読み込みモーダルを開く
-    async openLoadProjectModal() {
-        const modal = document.getElementById('projectModal');
-        const projectList = document.getElementById('projectList');
+    // プロジェクト読み込みダイアログを開く
+    openLoadProjectDialog() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
         
-        if (!modal || !projectList) return;
+        input.onchange = async (e) => {
+            await this.loadProjectJSON(e);
+        };
         
-        // プロジェクト一覧を取得
+        input.click();
+    }
+    
+    // プロジェクトJSON読み込み
+    async loadProjectJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const projectData = JSON.parse(e.target.result);
+                
+                // バージョンチェック
+                if (projectData.version !== '1.0') {
+                    console.warn('異なるバージョンのプロジェクトです:', projectData.version);
+                }
+                
+                // プロジェクトデータを一時保存
+                this.pendingProject = projectData;
+                
+                // プロジェクト名を表示
+                const projectNameElement = document.getElementById('projectName');
+                if (projectNameElement) {
+                    projectNameElement.textContent = projectData.projectName || '無題のプロジェクト';
+                }
+                
+                // 素材ZIP読み込みを促す
+                const projectName = projectData.projectName || 'プロジェクト';
+                const loadZip = confirm(
+                    `プロジェクト「${projectName}」を読み込みました。\n\n` +
+                    `続いて素材ZIPファイル「${projectName}_素材.zip」を選択してください。`
+                );
+                
+                if (loadZip) {
+                    this.openLoadAssetsZipDialog();
+                } else {
+                    alert('素材が読み込まれていません。\n後で読み込む場合は、再度プロジェクトを開いてください。');
+                    this.pendingProject = null;
+                }
+            } catch (error) {
+                console.error('Load project JSON error:', error);
+                alert(`プロジェクトの読み込みに失敗しました: ${error.message}`);
+            }
+        };
+        
+        reader.onerror = () => {
+            alert('ファイルの読み込みに失敗しました');
+        };
+        
+        reader.readAsText(file);
+    }
+    
+    // 素材ZIP読み込みダイアログを開く
+    openLoadAssetsZipDialog() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.zip';
+        
+        input.onchange = async (e) => {
+            await this.loadAssetsZip(e);
+        };
+        
+        input.click();
+    }
+    
+    // 素材ZIP読み込み
+    async loadAssetsZip(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
         try {
-            const projects = await window.projectManager.getAllProjects();
-            
-            projectList.innerHTML = '';
-            
-            if (projects.length === 0) {
-                projectList.innerHTML = '<p class="text-muted text-center">保存されたプロジェクトがありません</p>';
-            } else {
-                projects.forEach(project => {
-                    const item = document.createElement('div');
-                    item.className = 'project-item';
-                    
-                    const updatedDate = new Date(project.updatedAt).toLocaleString('ja-JP');
-                    
-                    item.innerHTML = `
-                        <div class="project-item-info">
-                            <div class="project-item-name">${project.name}</div>
-                            <div class="project-item-meta">
-                                <span>トラック数: ${project.tracks?.length || 0}</span>
-                                <span>更新日: ${updatedDate}</span>
-                            </div>
-                        </div>
-                        <div class="project-item-actions">
-                            <button class="btn btn-small btn-primary" data-action="load" data-id="${project.id}">読込</button>
-                            <button class="btn btn-small btn-warning" data-action="download" data-id="${project.id}">DL</button>
-                            <button class="btn btn-small btn-danger" data-action="delete" data-id="${project.id}">削除</button>
-                        </div>
-                    `;
-                    
-                    projectList.appendChild(item);
-                });
-                
-                // アクションボタンのイベント
-                projectList.querySelectorAll('[data-action="load"]').forEach(btn => {
-                    btn.addEventListener('click', async () => {
-                        const projectId = parseInt(btn.dataset.id);
-                        await this.loadProject(projectId);
-                        modal.classList.remove('active');
-                    });
-                });
-                
-                projectList.querySelectorAll('[data-action="download"]').forEach(btn => {
-                    btn.addEventListener('click', async () => {
-                        const projectId = parseInt(btn.dataset.id);
-                        const project = await window.projectManager.loadProject(projectId);
-                        window.projectManager.downloadProjectAsJSON(project);
-                    });
-                });
-                
-                projectList.querySelectorAll('[data-action="delete"]').forEach(btn => {
-                    btn.addEventListener('click', async () => {
-                        if (confirm('このプロジェクトを削除しますか？')) {
-                            const projectId = parseInt(btn.dataset.id);
-                            await window.projectManager.deleteProject(projectId);
-                            this.openLoadProjectModal(); // リストを再読み込み
-                        }
-                    });
+            // JSZipライブラリを使用
+            if (!window.JSZip) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
                 });
             }
             
-            modal.classList.add('active');
-        } catch (error) {
-            console.error('Load projects error:', error);
-            alert('プロジェクト一覧の取得に失敗しました');
-        }
-    }
-    
-    // プロジェクト読み込み
-    async loadProject(projectId) {
-        try {
-            const project = await window.projectManager.loadProject(projectId);
+            const zip = await JSZip.loadAsync(file);
+            const assetsFolder = zip.folder('assets');
             
-            // トラックをクリア
-            window.trackManager.clearAllTracks();
+            if (!assetsFolder) {
+                throw new Error('ZIPファイル内にassetsフォルダが見つかりません');
+            }
             
-            // ファイルをクリア
+            // 既存の素材をクリア
             window.fileManager.clearAllFiles();
             
-            // プロジェクト名を表示
-            const projectNameElement = document.getElementById('projectName');
-            if (projectNameElement) {
-                projectNameElement.textContent = project.name;
+            // ZIPから素材を抽出
+            const filePromises = [];
+            
+            assetsFolder.forEach((relativePath, zipEntry) => {
+                if (zipEntry.dir) return;
+                
+                const promise = zipEntry.async('blob').then(async blob => {
+                    const fileName = relativePath.split('/').pop();
+                    
+                    // ファイル名からIDと名前を抽出（id_name.wav形式）
+                    const match = fileName.match(/^(.+?)_(.+?)\.wav$/);
+                    const fileId = match ? match[1] : fileName;
+                    const originalName = match ? match[2] : fileName.replace('.wav', '');
+                    
+                    // WAVファイルをAudioBufferに変換
+                    const arrayBuffer = await blob.arrayBuffer();
+                    const audioBuffer = await window.audioEngine.decodeAudioFile(arrayBuffer);
+                    
+                    // プロジェクトデータから該当ファイルのメタデータを探す
+                    let category = 'other';
+                    if (this.pendingProject && this.pendingProject.audioFiles) {
+                        const meta = this.pendingProject.audioFiles.find(f => f.id === fileId);
+                        if (meta) {
+                            category = meta.category;
+                        }
+                    }
+                    
+                    // ファイルマネージャーに追加
+                    window.fileManager.addFileFromData({
+                        id: fileId,
+                        name: originalName,
+                        category: category,
+                        duration: audioBuffer.duration,
+                        sampleRate: audioBuffer.sampleRate,
+                        numberOfChannels: audioBuffer.numberOfChannels,
+                        audioBuffer: audioBuffer
+                    });
+                });
+                
+                filePromises.push(promise);
+            });
+            
+            await Promise.all(filePromises);
+            
+            // プロジェクトデータから項目を復元
+            if (this.pendingProject) {
+                await this.restoreProjectData(this.pendingProject);
+                this.pendingProject = null;
             }
             
-            // モーダルを閉じる
-            const modal = document.getElementById('projectModal');
-            if (modal) {
-                modal.classList.remove('active');
-            }
-            
-            // 素材ZIPの読み込みを促す
-            const loadZip = confirm(`プロジェクト「${project.name}」を読み込みました。\n\n続いて素材ZIPファイル「${project.name}_素材.zip」を読み込みますか？`);
-            
-            if (loadZip) {
-                await this.loadAudioFilesFromZip(project);
-            } else {
-                alert('素材が読み込まれていません。\n後で「ファイル」→「素材ZIPを読み込み」から読み込んでください。');
-            }
-            
+            alert('素材とプロジェクトの読み込みが完了しました');
         } catch (error) {
-            console.error('Load project error:', error);
-            alert(`プロジェクトの読み込みに失敗しました: ${error.message}`);
+            console.error('Load assets ZIP error:', error);
+            alert(`素材ZIPの読み込みに失敗しました: ${error.message}`);
         }
     }
     
-    // 素材ZIPから音声ファイルを読み込み
-    async loadAudioFilesFromZip(project) {
-        return new Promise((resolve, reject) => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.zip';
-            
-            input.onchange = async (e) => {
-                try {
-                    const file = e.target.files[0];
-                    if (!file) {
-                        resolve();
-                        return;
-                    }
+    // プロジェクトデータから項目を復元
+    async restoreProjectData(projectData) {
+        // トラックをクリア
+        window.trackManager.clearAllTracks();
+        
+        // トラックとクリップを復元
+        if (projectData.tracks) {
+            for (const trackData of projectData.tracks) {
+                const track = window.trackManager.addTrack(trackData.name);
+                if (track) {
+                    track.volume = trackData.volume ?? 0.8;
+                    track.mute = trackData.mute ?? false;
+                    track.solo = trackData.solo ?? false;
+                    track.eqEnabled = trackData.eqEnabled ?? false;
+                    track.limiterEnabled = trackData.limiterEnabled ?? false;
                     
-                    // JSZipライブラリを使用
-                    if (!window.JSZip) {
-                        const script = document.createElement('script');
-                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-                        await new Promise((res, rej) => {
-                            script.onload = res;
-                            script.onerror = rej;
-                            document.head.appendChild(script);
-                        });
-                    }
-                    
-                    const zip = await JSZip.loadAsync(file);
-                    const audioFiles = [];
-                    
-                    // ZIP内の各ファイルを処理
-                    for (const [filename, zipEntry] of Object.entries(zip.files)) {
-                        if (zipEntry.dir) continue;
-                        if (!filename.endsWith('.wav')) continue;
-                        
-                        const blob = await zipEntry.async('blob');
-                        const arrayBuffer = await blob.arrayBuffer();
-                        const audioBuffer = await window.audioEngine.decodeAudioFile(arrayBuffer);
-                        
-                        // ファイル名からIDと名前を抽出（id_name.wav形式）
-                        const match = filename.match(/^(.+?)_(.+?)\.wav$/);
-                        const fileId = match ? match[1] : filename;
-                        const fileName = match ? match[2] : filename.replace('.wav', '');
-                        
-                        // プロジェクトのメタデータから該当ファイルを探す
-                        const meta = project.audioFiles.find(f => f.id === fileId);
-                        
-                        if (meta) {
-                            const audioFile = {
-                                id: fileId,
-                                name: fileName,
-                                category: meta.category,
-                                duration: audioBuffer.duration,
-                                sampleRate: audioBuffer.sampleRate,
-                                numberOfChannels: audioBuffer.numberOfChannels,
-                                audioBuffer: audioBuffer
-                            };
-                            
-                            window.fileManager.addFileFromData(audioFile);
-                        }
-                    }
-                    
-                    // トラックとクリップを復元
-                    if (project.tracks) {
-                        for (const trackData of project.tracks) {
-                            const track = window.trackManager.addTrack(trackData.name);
-                            if (track) {
-                                track.volume = trackData.volume || 0.8;
-                                track.mute = trackData.mute || false;
-                                track.solo = trackData.solo || false;
-                                
-                                // クリップを復元
-                                for (const clipData of trackData.clips) {
-                                    const audioFile = window.fileManager.getFileById(clipData.fileId);
-                                    if (audioFile) {
-                                        const clip = await window.trackManager.addClip(track.id, audioFile, clipData.startTime);
-                                        if (clip) {
-                                            clip.offset = clipData.offset || 0;
-                                            clip.gain = clipData.gain || 0;
-                                            clip.fadeIn = clipData.fadeIn || 0;
-                                            clip.fadeOut = clipData.fadeOut || 0;
-                                        }
-                                    }
-                                }
+                    // クリップを復元
+                    for (const clipData of trackData.clips) {
+                        const audioFile = window.fileManager.getFileById(clipData.fileId);
+                        if (audioFile) {
+                            const clip = await window.trackManager.addClip(track.id, audioFile, clipData.startTime);
+                            if (clip) {
+                                clip.offset = clipData.offset ?? 0;
+                                clip.gain = clipData.gain ?? 0;
+                                clip.fadeIn = clipData.fadeIn ?? 0;
+                                clip.fadeOut = clipData.fadeOut ?? 0;
                             }
+                        } else {
+                            console.warn(`素材が見つかりません: ${clipData.fileId}`);
                         }
                     }
-                    
-                    // エフェクト設定を復元
-                    if (project.effectSettings) {
-                        window.effectsManager.applyEffectSettings(project.effectSettings);
-                    }
-                    
-                    // ズームを復元
-                    if (project.zoom) {
-                        window.trackManager.setZoom(project.zoom);
-                    }
-                    
-                    alert('素材とプロジェクトの読み込みが完了しました');
-                    resolve();
-                } catch (error) {
-                    console.error('Load ZIP error:', error);
-                    alert(`素材ZIPの読み込みに失敗しました: ${error.message}`);
-                    reject(error);
                 }
-            };
-            
-            input.click();
-        });
+            }
+        }
+        
+        // エフェクト設定を復元
+        if (projectData.effectSettings) {
+            window.effectsManager.applyEffectSettings(projectData.effectSettings);
+        }
+        
+        // ズームを復元
+        if (projectData.zoom) {
+            window.trackManager.setZoom(projectData.zoom);
+        }
     }
     
     // 再生
