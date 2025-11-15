@@ -79,6 +79,41 @@ class VoiceDramaDAW {
     
     // イベントリスナー設定
     setupEventListeners() {
+        // プロジェクト名の編集
+        const projectNameInput = document.getElementById('projectName');
+        if (projectNameInput) {
+            // フォーカス時に全選択
+            projectNameInput.addEventListener('focus', (e) => {
+                e.target.select();
+            });
+            
+            // 入力時にプロジェクト名を更新
+            projectNameInput.addEventListener('change', (e) => {
+                let newName = e.target.value.trim();
+                
+                // 空の場合はデフォルト名
+                if (!newName) {
+                    newName = '新規プロジェクト';
+                }
+                
+                // ファイル名として使えない文字を除去
+                newName = newName.replace(/[<>:"/\\|?*]/g, '_');
+                
+                // プロジェクト名を更新
+                e.target.value = newName;
+                window.projectManager.updateProjectName(newName);
+                
+                console.log(`プロジェクト名を変更: ${newName}`);
+            });
+            
+            // Enterキーで確定
+            projectNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.target.blur(); // フォーカスを外して変更を確定
+                }
+            });
+        }
+        
         // プロジェクト管理
         document.getElementById('newProjectBtn')?.addEventListener('click', () => {
             if (confirm('新規プロジェクトを作成しますか？未保存の変更は失われます。')) {
@@ -255,7 +290,7 @@ class VoiceDramaDAW {
         // プロジェクト名を表示
         const projectNameElement = document.getElementById('projectName');
         if (projectNameElement) {
-            projectNameElement.textContent = project.name;
+            projectNameElement.value = project.name;
         }
         
         // エフェクトをリセット
@@ -278,9 +313,9 @@ class VoiceDramaDAW {
                 return;
             }
             
-            // プロジェクト名を入力
-            const projectName = prompt('プロジェクト名を入力してください:', project.name);
-            if (!projectName) return; // キャンセル
+            // 現在のプロジェクト名を取得
+            const projectNameElement = document.getElementById('projectName');
+            const projectName = projectNameElement ? projectNameElement.value.trim() : project.name;
             
             // ファイル名として使えない文字を除去
             const safeName = projectName.replace(/[<>:"/\\|?*]/g, '_');
@@ -289,10 +324,9 @@ class VoiceDramaDAW {
             project.name = safeName;
             window.projectManager.updateProjectName(safeName);
             
-            // プロジェクト名を表示
-            const projectNameElement = document.getElementById('projectName');
+            // プロジェクト名を表示に反映
             if (projectNameElement) {
-                projectNameElement.textContent = safeName;
+                projectNameElement.value = safeName;
             }
             
             // 現在の状態を保存（素材本体は含めない）
@@ -552,7 +586,7 @@ class VoiceDramaDAW {
                 // プロジェクト名を表示
                 const projectNameElement = document.getElementById('projectName');
                 if (projectNameElement) {
-                    projectNameElement.textContent = projectData.projectName || '無題のプロジェクト';
+                    projectNameElement.value = projectData.projectName || '無題のプロジェクト';
                 }
                 
                 // 素材ZIP読み込みを促す

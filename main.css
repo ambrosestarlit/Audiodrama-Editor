@@ -70,6 +70,34 @@ body {
     color: var(--color-text-secondary);
 }
 
+.project-name-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 17px;
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    padding: 0;
+    margin: 0;
+    min-width: 150px;
+    max-width: 400px;
+    cursor: text;
+    transition: color 0.2s;
+}
+
+.project-name-input:hover {
+    color: var(--color-text-primary);
+}
+
+.project-name-input:focus {
+    color: var(--color-primary);
+}
+
+.project-name-input::selection {
+    background: var(--color-accent);
+    color: white;
+}
+
 .header-controls {
     display: flex;
     gap: var(--spacing-sm);

@@ -360,11 +360,135 @@ class TrackManager {
     
     // ドラッグ終了
     endDrag() {
+        if (this.isDragging && this.dragTarget) {
+            // 衝突検出と自動トリミング
+            this.handleClipCollision(this.dragTarget.trackId, this.dragTarget.clipId);
+        }
+        
         this.isDragging = false;
         this.dragTarget = null;
         
         document.removeEventListener('mousemove', this.handleDrag.bind(this));
         document.removeEventListener('mouseup', this.endDrag.bind(this));
+    }
+    
+    // クリップ衝突検出と自動トリミング
+    handleClipCollision(trackId, clipId) {
+        const track = this.getTrack(trackId);
+        if (!track) return;
+        
+        const movedClip = track.clips.find(c => c.id === clipId);
+        if (!movedClip) return;
+        
+        const movedStart = movedClip.startTime;
+        const movedEnd = movedClip.startTime + movedClip.duration - movedClip.offset;
+        
+        // 同じトラックの他のクリップをチェック
+        track.clips.forEach(otherClip => {
+            if (otherClip.id === clipId) return; // 自分自身はスキップ
+            
+            const otherStart = otherClip.startTime;
+            const otherEnd = otherClip.startTime + otherClip.duration - otherClip.offset;
+            
+            // パターン1: 移動したクリップが他のクリップの前に入り込んだ
+            // [他のクリップ    ] に [移動クリップ] が左から衝突
+            // → 他のクリップの頭をトリミング
+            if (movedEnd > otherStart && movedEnd < otherEnd && movedStart < otherStart) {
+                const overlap = movedEnd - otherStart;
+                otherClip.offset += overlap;
+                otherClip.startTime = movedEnd;
+                
+                console.log(`前方衝突: クリップ ${otherClip.id} の頭を ${overlap.toFixed(2)}秒 トリミング`);
+                
+                // audioEngineのクリップも更新
+                const audioTrack = window.audioEngine.getTrack(trackId);
+                if (audioTrack) {
+                    const audioClip = audioTrack.clips.find(c => c.id === otherClip.id);
+                    if (audioClip) {
+                        audioClip.offset = otherClip.offset;
+                        audioClip.startTime = otherClip.startTime;
+                    }
+                }
+                
+                // 位置と幅を更新
+                this.updateClipPositionAndWidth(trackId, otherClip.id);
+                // 波形を再描画
+                this.drawClipWaveform(trackId, otherClip.id);
+            }
+            
+            // パターン2: 移動したクリップが他のクリップの後ろに入り込んだ
+            // [移動クリップ] が [他のクリップ    ] に右から衝突
+            // → 他のクリップの後ろをトリミング
+            else if (movedStart < otherEnd && movedStart > otherStart && movedEnd > otherEnd) {
+                const overlap = otherEnd - movedStart;
+                const visibleDuration = otherClip.duration - otherClip.offset;
+                const newVisibleDuration = visibleDuration - overlap;
+                
+                // 最小デュレーションチェック（0.1秒未満にはしない）
+                if (newVisibleDuration >= 0.1) {
+                    console.log(`後方衝突: クリップ ${otherClip.id} の後ろを ${overlap.toFixed(2)}秒 トリミング`);
+                    
+                    // audioEngineのクリップの再生時間を調整
+                    const audioTrack = window.audioEngine.getTrack(trackId);
+                    if (audioTrack) {
+                        const audioClip = audioTrack.clips.find(c => c.id === otherClip.id);
+                        if (audioClip) {
+                            audioClip.duration = otherClip.offset + newVisibleDuration;
+                        }
+                    }
+                    
+                    // trackManagerのクリップも更新
+                    otherClip.duration = otherClip.offset + newVisibleDuration;
+                    
+                    // 幅を更新
+                    this.updateClipPositionAndWidth(trackId, otherClip.id);
+                    // 波形を再描画
+                    this.drawClipWaveform(trackId, otherClip.id);
+                }
+            }
+            
+            // パターン3: 移動したクリップが他のクリップを完全に覆った場合
+            // [移動クリップ          ] が [他のクリップ] を完全に覆う
+            // → 他のクリップを非表示（最小サイズに）
+            else if (movedStart <= otherStart && movedEnd >= otherEnd) {
+                console.log(`完全衝突: クリップ ${otherClip.id} が完全に覆われました`);
+                
+                // この場合は他のクリップを移動させる（移動クリップの後ろへ）
+                otherClip.startTime = movedEnd;
+                otherClip.offset = 0;
+                
+                // audioEngineのクリップも更新
+                const audioTrack = window.audioEngine.getTrack(trackId);
+                if (audioTrack) {
+                    const audioClip = audioTrack.clips.find(c => c.id === otherClip.id);
+                    if (audioClip) {
+                        audioClip.startTime = otherClip.startTime;
+                        audioClip.offset = otherClip.offset;
+                    }
+                }
+                
+                // 位置を更新
+                this.updateClipPositionAndWidth(trackId, otherClip.id);
+                // 波形を再描画
+                this.drawClipWaveform(trackId, otherClip.id);
+            }
+        });
+    }
+    
+    // クリップ位置と幅を更新
+    updateClipPositionAndWidth(trackId, clipId) {
+        const track = this.getTrack(trackId);
+        const clip = track.clips.find(c => c.id === clipId);
+        const clipElement = document.querySelector(`[data-clip-id="${clipId}"][data-track-id="${trackId}"]`);
+        
+        if (clipElement && clip) {
+            const leftPos = clip.startTime * this.pixelsPerSecond;
+            const visibleDuration = clip.duration - clip.offset;
+            const width = visibleDuration * this.pixelsPerSecond;
+            
+            clipElement.style.left = `${leftPos}px`;
+            clipElement.style.width = `${width}px`;
+        }
     }
     
     // クリップ位置更新
