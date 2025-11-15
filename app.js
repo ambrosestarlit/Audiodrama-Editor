@@ -348,7 +348,8 @@ class VoiceDramaDAW {
         
         const channels = [];
         for (let i = 0; i < numberOfChannels; i++) {
-            channels.push(audioBuffer.getChannelData(i));
+            // Float32Arrayを通常の配列に変換（IndexedDB対応）
+            channels.push(Array.from(audioBuffer.getChannelData(i)));
         }
         
         return {
