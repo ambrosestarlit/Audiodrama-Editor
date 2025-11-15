@@ -333,6 +333,7 @@ class VoiceDramaDAW {
                         },
                         
                         // ノイズリダクション設定（audioEngineから取得）
+                        noiseReductionEnabled: audioTrack?.noiseReductionEnabled ?? false,
                         noiseReduction: {
                             highpassEnabled: audioTrack?.noiseReduction?.highpassEnabled ?? false,
                             highpassFrequency: audioTrack?.noiseReduction?.highpassCutoff ?? 80,
@@ -736,7 +737,8 @@ class VoiceDramaDAW {
                         window.audioEngine.setTrackLimiterEnabled(track.id, audioTrack.limiterEnabled);
                         
                         // ノイズリダクション設定を復元
-                        audioTrack.noiseReductionEnabled = trackData.noiseReduction?.highpassEnabled || trackData.noiseReduction?.lowpassEnabled || false;
+                        audioTrack.noiseReductionEnabled = trackData.noiseReductionEnabled ?? 
+                            (trackData.noiseReduction?.highpassEnabled || trackData.noiseReduction?.lowpassEnabled || false);
                         if (trackData.noiseReduction) {
                             audioTrack.noiseReduction.highpassEnabled = trackData.noiseReduction.highpassEnabled ?? false;
                             audioTrack.noiseReduction.lowpassEnabled = trackData.noiseReduction.lowpassEnabled ?? false;
@@ -792,11 +794,17 @@ class VoiceDramaDAW {
                                 if (audioClip) {
                                     audioClip.gain = clip.gain;
                                 }
+                                
+                                // 波形を再描画してゲインを反映
+                                await window.trackManager.drawClipWaveform(track.id, clip.id);
                             }
                         } else {
                             console.warn(`素材が見つかりません: ${clipData.fileId}`);
                         }
                     }
+                    
+                    // FXボタンの状態を更新
+                    window.effectsManager.updateFXButtonState(track.id);
                 }
             }
         }
