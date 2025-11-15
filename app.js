@@ -570,19 +570,26 @@ class VoiceDramaDAW {
             }
             
             // 既存の素材をクリア
-            window.fileManager.audioFiles = {
-                dialogue: [],
-                sfx: [],
-                bgm: [],
-                ambience: [],
-                effects: []
-            };
-            
-            // UIもクリア
-            ['dialogue', 'sfx', 'bgm', 'ambience', 'effects'].forEach(cat => {
-                const list = document.getElementById(`${cat}-list`);
-                if (list) list.innerHTML = '';
-            });
+            if (typeof window.fileManager.clearAllFiles === 'function') {
+                try {
+                    // clearAllFilesを呼ぶが、renderFileListエラーを無視
+                    window.fileManager.audioFiles = {
+                        dialogue: [],
+                        sfx: [],
+                        bgm: [],
+                        ambience: [],
+                        effects: []
+                    };
+                    
+                    // UIもクリア
+                    ['dialogue', 'sfx', 'bgm', 'ambience', 'effects'].forEach(cat => {
+                        const list = document.getElementById(`${cat}-list`);
+                        if (list) list.innerHTML = '';
+                    });
+                } catch (e) {
+                    console.warn('Clear files warning:', e);
+                }
+            }
             
             // ZIPから素材を抽出
             const filePromises = [];
@@ -598,12 +605,8 @@ class VoiceDramaDAW {
                     const fileId = match ? match[1] : fileName;
                     const originalName = match ? match[2] : fileName.replace('.wav', '');
                     
-                    // WAVファイルをAudioBufferに変換
-                    const arrayBuffer = await blob.arrayBuffer();
-                    const audioBuffer = await window.audioEngine.decodeAudioFile(arrayBuffer);
-                    
                     // プロジェクトデータから該当ファイルのメタデータを探す
-                    let category = 'other';
+                    let category = 'sfx'; // デフォルト
                     if (this.pendingProject && this.pendingProject.audioFiles) {
                         const meta = this.pendingProject.audioFiles.find(f => f.id === fileId);
                         if (meta) {
@@ -611,38 +614,18 @@ class VoiceDramaDAW {
                         }
                     }
                     
-                    const fileData = {
-                        id: fileId,
-                        name: originalName,
-                        category: category,
-                        duration: audioBuffer.duration,
-                        sampleRate: audioBuffer.sampleRate,
-                        numberOfChannels: audioBuffer.numberOfChannels,
-                        audioBuffer: audioBuffer
-                    };
+                    // BlobからFileオブジェクトを作成
+                    const mimeType = 'audio/wav';
+                    const file = new File([blob], fileName, { type: mimeType });
                     
-                    // ファイルマネージャーに追加
-                    if (!window.fileManager.audioFiles[category]) {
-                        window.fileManager.audioFiles[category] = [];
-                    }
-                    
-                    window.fileManager.audioFiles[category].push(fileData);
-                    
-                    // UIに表示
-                    if (typeof window.fileManager.renderFileItem === 'function') {
-                        window.fileManager.renderFileItem(fileData);
-                    }
+                    // fileManager.importAudioFileを使って追加
+                    await window.fileManager.importAudioFile(file, category);
                 });
                 
                 filePromises.push(promise);
             });
             
             await Promise.all(filePromises);
-            
-            // ファイルリストUIを更新（もし更新関数があれば）
-            if (typeof window.fileManager.updateAllFileLists === 'function') {
-                window.fileManager.updateAllFileLists();
-            }
             
             // プロジェクトデータから項目を復元
             if (this.pendingProject) {
