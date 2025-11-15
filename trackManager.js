@@ -94,9 +94,16 @@ class TrackManager {
                             title="削除">🗑️</button>
                 </div>
                 <div class="track-volume">
+                    <label class="track-param-label">Vol</label>
                     <input type="range" class="volume-slider" min="0" max="1" step="0.01" 
                            value="${track.volume}" data-track-id="${track.id}">
                     <span class="volume-value">${Math.round(track.volume * 100)}</span>
+                </div>
+                <div class="track-pan">
+                    <label class="track-param-label">Pan</label>
+                    <input type="range" class="pan-slider" min="-1" max="1" step="0.01" 
+                           value="${track.pan}" data-track-id="${track.id}">
+                    <span class="pan-value">C</span>
                 </div>
             </div>
             <div class="track-content" data-track-id="${track.id}"></div>
@@ -162,6 +169,37 @@ class TrackManager {
             track.clips.forEach(clip => {
                 this.drawClipWaveform(track.id, clip.id);
             });
+        });
+        
+        // Panスライダー
+        const panSlider = trackElement.querySelector('.pan-slider');
+        const panValue = trackElement.querySelector('.pan-value');
+        
+        // Panの表示を更新する関数
+        const updatePanDisplay = (value) => {
+            if (value === 0) {
+                panValue.textContent = 'C';
+            } else if (value < 0) {
+                panValue.textContent = `L${Math.abs(Math.round(value * 100))}`;
+            } else {
+                panValue.textContent = `R${Math.round(value * 100)}`;
+            }
+        };
+        
+        updatePanDisplay(track.pan);
+        
+        panSlider.addEventListener('input', (e) => {
+            track.pan = parseFloat(e.target.value);
+            window.audioEngine.setTrackPan(track.id, track.pan);
+            updatePanDisplay(track.pan);
+        });
+        
+        // Panスライダーをダブルクリックでセンターに戻す
+        panSlider.addEventListener('dblclick', () => {
+            track.pan = 0;
+            panSlider.value = 0;
+            window.audioEngine.setTrackPan(track.id, 0);
+            updatePanDisplay(0);
         });
         
         // トラックコンテンツへのドロップ
@@ -253,6 +291,12 @@ class TrackManager {
             this.openClipGainPopup(trackId, clip.id);
         });
         
+        // 右クリックでコンテキストメニュー
+        clipElement.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            this.showClipContextMenu(e, trackId, clip);
+        });
+        
         // ドラッグ移動
         clipElement.addEventListener('mousedown', (e) => {
             if (e.target.classList.contains('clip-resize-handle')) return;
@@ -272,6 +316,66 @@ class TrackManager {
             e.stopPropagation();
             this.startDrag(e, 'resize-right', trackId, clip);
         });
+    }
+    
+    // クリップコンテキストメニューを表示
+    showClipContextMenu(e, trackId, clip) {
+        // 既存のメニューがあれば削除
+        const existing = document.querySelector('.clip-context-menu');
+        if (existing) existing.remove();
+        
+        const menu = document.createElement('div');
+        menu.className = 'clip-context-menu';
+        menu.style.left = `${e.pageX}px`;
+        menu.style.top = `${e.pageY}px`;
+        
+        menu.innerHTML = `
+            <div class="context-menu-item" data-action="keyframe">
+                🎬 キーフレームエディタ
+            </div>
+            <div class="context-menu-item" data-action="gain">
+                🎚️ ゲイン調整
+            </div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" data-action="delete">
+                🗑️ 削除
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // メニュー項目のクリックイベント
+        menu.querySelectorAll('.context-menu-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const action = item.dataset.action;
+                
+                switch (action) {
+                    case 'keyframe':
+                        window.keyframeEditorUI.open(clip);
+                        break;
+                    case 'gain':
+                        this.openClipGainPopup(trackId, clip.id);
+                        break;
+                    case 'delete':
+                        this.removeClip(trackId, clip.id);
+                        break;
+                }
+                
+                menu.remove();
+            });
+        });
+        
+        // メニュー外をクリックで閉じる
+        const closeMenu = (event) => {
+            if (!menu.contains(event.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 10);
     }
     
     // クリップゲイン調整ポップアップを開く

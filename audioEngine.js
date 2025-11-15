@@ -674,27 +674,44 @@ class AudioEngine {
         source.buffer = clip.audioBuffer;
         source.playbackRate.value = this.playbackRate;
         
-        // フェードイン/アウト処理
-        const gainNode = this.audioContext.createGain();
-        source.connect(gainNode);
-        gainNode.connect(track.gain);
+        // フェードイン/アウト処理とクリップゲイン用のGainNode
+        const clipGainNode = this.audioContext.createGain();
         
-        // クリップゲインを適用
-        const clipGainLinear = clip.gain ? Math.pow(10, clip.gain / 20) : 1.0;
+        // キーフレーム用のGainNode（ボリューム）
+        const volumeGainNode = this.audioContext.createGain();
+        
+        // キーフレーム用のStereoPanner（パン）
+        const panNode = this.audioContext.createStereoPanner();
+        
+        // 接続: Source -> ClipGain -> VolumeGain -> Pan -> Track
+        source.connect(clipGainNode);
+        clipGainNode.connect(volumeGainNode);
+        volumeGainNode.connect(panNode);
+        panNode.connect(track.gain);
+        
+        // クリップゲインを適用（キーフレームまたは固定値）
+        const baseClipGain = clip.gain ? Math.pow(10, clip.gain / 20) : 1.0;
+        this.applyKeyframeAutomation(clip, 'gain', clipGainNode.gain, contextStartTime, clipStartTime, baseClipGain);
+        
+        // ボリュームキーフレームを適用
+        this.applyKeyframeAutomation(clip, 'volume', volumeGainNode.gain, contextStartTime, clipStartTime, 1.0);
+        
+        // パンキーフレームを適用
+        this.applyKeyframeAutomation(clip, 'pan', panNode.pan, contextStartTime, clipStartTime, 0);
         
         // フェードイン
         if (clip.fadeIn > 0) {
-            gainNode.gain.setValueAtTime(0, contextStartTime);
-            gainNode.gain.linearRampToValueAtTime(clipGainLinear, contextStartTime + clip.fadeIn);
+            clipGainNode.gain.setValueAtTime(0, contextStartTime);
+            clipGainNode.gain.linearRampToValueAtTime(baseClipGain, contextStartTime + clip.fadeIn);
         } else {
-            gainNode.gain.setValueAtTime(clipGainLinear, contextStartTime);
+            clipGainNode.gain.setValueAtTime(baseClipGain, contextStartTime);
         }
         
         // フェードアウト
         if (clip.fadeOut > 0) {
             const fadeOutStart = contextStartTime + clip.duration - clip.fadeOut;
-            gainNode.gain.setValueAtTime(clipGainLinear, fadeOutStart);
-            gainNode.gain.linearRampToValueAtTime(0, fadeOutStart + clip.fadeOut);
+            clipGainNode.gain.setValueAtTime(baseClipGain, fadeOutStart);
+            clipGainNode.gain.linearRampToValueAtTime(0, fadeOutStart + clip.fadeOut);
         }
         
         // 再生開始位置とオフセットを計算
@@ -714,10 +731,90 @@ class AudioEngine {
         // 停止時の処理
         source.onended = () => {
             source.disconnect();
-            gainNode.disconnect();
+            clipGainNode.disconnect();
+            volumeGainNode.disconnect();
+            panNode.disconnect();
         };
         
         clip.source = source;
+    }
+    
+    // キーフレームオートメーションを適用
+    applyKeyframeAutomation(clip, parameter, audioParam, contextStartTime, clipStartTime, defaultValue) {
+        if (!window.keyframeManager) return;
+        
+        const keyframes = window.keyframeManager.getParameterKeyframes(clip.id, parameter);
+        
+        if (keyframes.length === 0) {
+            // キーフレームがない場合はデフォルト値を設定
+            audioParam.setValueAtTime(defaultValue, contextStartTime);
+            return;
+        }
+        
+        // キーフレームの値をAudioParamに設定
+        keyframes.forEach((kf, index) => {
+            const time = contextStartTime + (kf.time - clipStartTime);
+            
+            if (index === 0) {
+                // 最初のキーフレーム
+                audioParam.setValueAtTime(kf.value, time);
+            } else {
+                const prevKf = keyframes[index - 1];
+                
+                // 補間タイプに応じて適用
+                switch (prevKf.interpolation) {
+                    case 'linear':
+                        audioParam.linearRampToValueAtTime(kf.value, time);
+                        break;
+                    case 'step':
+                        audioParam.setValueAtTime(prevKf.value, time);
+                        audioParam.setValueAtTime(kf.value, time);
+                        break;
+                    case 'ease-in':
+                    case 'ease-out':
+                    case 'ease-in-out':
+                        // Web Audio APIではカスタムイージングは難しいので、
+                        // 複数のlinearRampで近似
+                        this.approximateEasing(audioParam, prevKf, kf, time, contextStartTime, clipStartTime);
+                        break;
+                    default:
+                        audioParam.linearRampToValueAtTime(kf.value, time);
+                }
+            }
+        });
+    }
+    
+    // イージングを複数のlinearRampで近似
+    approximateEasing(audioParam, startKf, endKf, endTime, contextStartTime, clipStartTime) {
+        const steps = 10;
+        const startTime = contextStartTime + (startKf.time - clipStartTime);
+        const duration = endTime - startTime;
+        
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            let easedT;
+            
+            switch (startKf.interpolation) {
+                case 'ease-in':
+                    easedT = t * t;
+                    break;
+                case 'ease-out':
+                    easedT = 1 - Math.pow(1 - t, 2);
+                    break;
+                case 'ease-in-out':
+                    easedT = t < 0.5 
+                        ? 2 * t * t 
+                        : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                    break;
+                default:
+                    easedT = t;
+            }
+            
+            const value = startKf.value + (endKf.value - startKf.value) * easedT;
+            const time = startTime + (duration * t);
+            
+            audioParam.linearRampToValueAtTime(value, time);
+        }
     }
     
     // 一時停止

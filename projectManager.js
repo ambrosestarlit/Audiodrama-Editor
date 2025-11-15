@@ -16,7 +16,8 @@ class ProjectManager {
             sampleRate: 48000,
             bitDepth: 24,
             tracks: [],
-            audioFiles: []
+            audioFiles: [],
+            keyframes: {}
         };
         
         return this.currentProject;
@@ -72,6 +73,11 @@ class ProjectManager {
         if (!proj) {
             alert('ダウンロードするプロジェクトがありません');
             return;
+        }
+        
+        // キーフレームデータを含める
+        if (window.keyframeManager) {
+            proj.keyframes = window.keyframeManager.serialize();
         }
         
         const jsonData = JSON.stringify(proj, null, 2);

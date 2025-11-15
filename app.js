@@ -22,7 +22,9 @@ class VoiceDramaDAW {
                 'effectsManager',
                 'exportManager',
                 'trackManager',
-                'historyManager'
+                'historyManager',
+                'keyframeManager',
+                'keyframeEditorUI'
             ];
             
             const missingManagers = requiredManagers.filter(manager => !window[manager]);
@@ -56,6 +58,15 @@ class VoiceDramaDAW {
                 console.log('✓ exportManager initialized');
             } catch (error) {
                 console.error('✗ exportManager initialization failed:', error);
+                throw error;
+            }
+            
+            try {
+                console.log('Initializing keyframeEditorUI...');
+                window.keyframeEditorUI.init();
+                console.log('✓ keyframeEditorUI initialized');
+            } catch (error) {
+                console.error('✗ keyframeEditorUI initialization failed:', error);
                 throw error;
             }
             
@@ -846,6 +857,12 @@ class VoiceDramaDAW {
         // エフェクト設定を復元
         if (projectData.effectSettings) {
             window.effectsManager.applyEffectSettings(projectData.effectSettings);
+        }
+        
+        // キーフレームデータを復元
+        if (projectData.keyframes && window.keyframeManager) {
+            window.keyframeManager.deserialize(projectData.keyframes);
+            console.log('キーフレームデータを復元しました');
         }
         
         // ズームを復元
