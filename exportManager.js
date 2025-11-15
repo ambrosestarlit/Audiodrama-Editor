@@ -137,15 +137,42 @@ class ExportManager {
             // トラックエフェクトチェーンを構築
             let trackOutput = trackGain;
             
+            // エキスパンダーを適用
+            if (audioTrack && audioTrack.expanderEnabled && audioTrack.expander) {
+                const expander = offlineContext.createDynamicsCompressor();
+                expander.threshold.value = audioTrack.expander.threshold.value;
+                expander.knee.value = audioTrack.expander.knee.value;
+                expander.ratio.value = audioTrack.expander.ratio.value;
+                expander.attack.value = audioTrack.expander.attack.value;
+                expander.release.value = audioTrack.expander.release.value;
+                
+                trackOutput.connect(expander);
+                trackOutput = expander;
+            }
+            
             // ノイズリダクションを適用
             if (audioTrack && audioTrack.noiseReductionEnabled && audioTrack.noiseReduction) {
-                const highpass = offlineContext.createBiquadFilter();
-                highpass.type = 'highpass';
-                highpass.frequency.value = audioTrack.noiseReduction.cutoffFreq;
-                highpass.Q.value = audioTrack.noiseReduction.resonance;
+                // ハイパスフィルタ
+                if (audioTrack.noiseReduction.highpassEnabled) {
+                    const highpass = offlineContext.createBiquadFilter();
+                    highpass.type = 'highpass';
+                    highpass.frequency.value = audioTrack.noiseReduction.highpassCutoff;
+                    highpass.Q.value = audioTrack.noiseReduction.highpassResonance;
+                    
+                    trackOutput.connect(highpass);
+                    trackOutput = highpass;
+                }
                 
-                trackOutput.connect(highpass);
-                trackOutput = highpass;
+                // ローパスフィルタ
+                if (audioTrack.noiseReduction.lowpassEnabled) {
+                    const lowpass = offlineContext.createBiquadFilter();
+                    lowpass.type = 'lowpass';
+                    lowpass.frequency.value = audioTrack.noiseReduction.lowpassCutoff;
+                    lowpass.Q.value = audioTrack.noiseReduction.lowpassResonance;
+                    
+                    trackOutput.connect(lowpass);
+                    trackOutput = lowpass;
+                }
             }
             
             // EQを適用
