@@ -394,12 +394,22 @@ class VoiceDramaDAW {
         const zip = new JSZip();
         const assetsFolder = zip.folder('assets');
         
-        // 各ファイルをWAV形式でZIPに追加
+        // カテゴリごとにフォルダを作成
+        const categoryFolders = {};
+        const categories = ['dialogue', 'sfx', 'bgm', 'ambience', 'effects'];
+        categories.forEach(cat => {
+            categoryFolders[cat] = assetsFolder.folder(cat);
+        });
+        
+        // 各ファイルをカテゴリフォルダに追加
         for (const file of fileList) {
-            if (file.audioBuffer) {
+            if (file.audioBuffer && file.category) {
                 const wavBlob = this.audioBufferToWavBlob(file.audioBuffer);
                 const fileName = `${file.id}_${file.name}.wav`;
-                assetsFolder.file(fileName, wavBlob);
+                const folder = categoryFolders[file.category];
+                if (folder) {
+                    folder.file(fileName, wavBlob);
+                }
             }
         }
         
@@ -597,32 +607,30 @@ class VoiceDramaDAW {
             assetsFolder.forEach((relativePath, zipEntry) => {
                 if (zipEntry.dir) return;
                 
-                const promise = zipEntry.async('blob').then(async blob => {
-                    const fileName = relativePath.split('/').pop();
-                    
-                    // ファイル名からIDと名前を抽出（id_name.wav形式）
-                    const match = fileName.match(/^(.+?)_(.+?)\.wav$/);
-                    const fileId = match ? match[1] : fileName;
-                    const originalName = match ? match[2] : fileName.replace('.wav', '');
-                    
-                    // プロジェクトデータから該当ファイルのメタデータを探す
-                    let category = 'sfx'; // デフォルト
-                    if (this.pendingProject && this.pendingProject.audioFiles) {
-                        const meta = this.pendingProject.audioFiles.find(f => f.id === fileId);
-                        if (meta) {
-                            category = meta.category;
-                        }
-                    }
-                    
-                    // BlobからFileオブジェクトを作成
-                    const mimeType = 'audio/wav';
-                    const file = new File([blob], fileName, { type: mimeType });
-                    
-                    // fileManager.importAudioFileを使って追加
-                    await window.fileManager.importAudioFile(file, category);
-                });
+                // パスを分解（例: "dialogue/file_123_voice.wav"）
+                const pathParts = relativePath.split('/');
                 
-                filePromises.push(promise);
+                if (pathParts.length >= 2) {
+                    // カテゴリフォルダ内のファイル
+                    const category = pathParts[0]; // dialogue, sfx, bgm, ambience, effects
+                    const fileName = pathParts[pathParts.length - 1];
+                    
+                    const promise = zipEntry.async('blob').then(async blob => {
+                        // ファイル名からIDと名前を抽出（id_name.wav形式）
+                        const match = fileName.match(/^(.+?)_(.+?)\.wav$/);
+                        const fileId = match ? match[1] : fileName;
+                        const originalName = match ? match[2] : fileName.replace('.wav', '');
+                        
+                        // BlobからFileオブジェクトを作成
+                        const mimeType = 'audio/wav';
+                        const file = new File([blob], fileName, { type: mimeType });
+                        
+                        // fileManager.importAudioFileを使って追加
+                        await window.fileManager.importAudioFile(file, category);
+                    });
+                    
+                    filePromises.push(promise);
+                }
             });
             
             await Promise.all(filePromises);
