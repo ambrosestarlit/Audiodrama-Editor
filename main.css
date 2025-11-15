@@ -464,10 +464,22 @@ body {
 .track-volume {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .volume-slider {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+}
+
+.volume-value {
+    min-width: 32px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary);
 }
 
 .track-content {
@@ -909,3 +921,105 @@ body {
 .mb-sm { margin-bottom: var(--spacing-sm); }
 .mb-md { margin-bottom: var(--spacing-md); }
 .mb-lg { margin-bottom: var(--spacing-lg); }
+
+/* ==========================================
+   カスタムスライダー（くまさんつまみ）
+   ========================================== */
+
+/* すべてのスライダーに共通のスタイル */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    background: linear-gradient(to right, 
+        var(--color-accent) 0%, 
+        var(--color-accent) 50%, 
+        var(--color-border-medium) 50%, 
+        var(--color-border-medium) 100%);
+    border-radius: 3px;
+    outline: none;
+    transition: background 0.2s;
+}
+
+input[type="range"]:hover {
+    background: linear-gradient(to right, 
+        var(--color-primary) 0%, 
+        var(--color-primary) 50%, 
+        var(--color-border-dark) 50%, 
+        var(--color-border-dark) 100%);
+}
+
+/* Webkit（Chrome, Safari, Edge）用のつまみ */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background-image: url('slider-thumb.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+    transform: scale(1.1);
+}
+
+/* Firefox用のつまみ */
+input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background-image: url('slider-thumb.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    border: none;
+    border-radius: 0;
+    transition: transform 0.2s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb:active {
+    transform: scale(1.1);
+}
+
+/* Firefox用のトラック */
+input[type="range"]::-moz-range-track {
+    height: 6px;
+    background: var(--color-border-medium);
+    border-radius: 3px;
+}
+
+input[type="range"]::-moz-range-progress {
+    height: 6px;
+    background: var(--color-accent);
+    border-radius: 3px;
+}
+
+/* 無効状態 */
+input[type="range"]:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+input[type="range"]:disabled::-webkit-slider-thumb {
+    cursor: not-allowed;
+    transform: none;
+}
+
+input[type="range"]:disabled::-moz-range-thumb {
+    cursor: not-allowed;
+    transform: none;
+}
+

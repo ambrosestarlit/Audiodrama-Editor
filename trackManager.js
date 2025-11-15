@@ -36,7 +36,7 @@ class TrackManager {
             clips: [],
             mute: false,
             solo: false,
-            volume: 0.8,
+            volume: 1.0,
             pan: 0,
             color: this.generateTrackColor()
         };
@@ -96,6 +96,7 @@ class TrackManager {
                 <div class="track-volume">
                     <input type="range" class="volume-slider" min="0" max="1" step="0.01" 
                            value="${track.volume}" data-track-id="${track.id}">
+                    <span class="volume-value">${Math.round(track.volume * 100)}</span>
                 </div>
             </div>
             <div class="track-content" data-track-id="${track.id}"></div>
@@ -150,6 +151,17 @@ class TrackManager {
         volumeSlider.addEventListener('input', (e) => {
             track.volume = parseFloat(e.target.value);
             window.audioEngine.setTrackVolume(track.id, track.volume);
+            
+            // 数値表示を更新 (0-100スケール)
+            const volumeValue = trackElement.querySelector('.volume-value');
+            if (volumeValue) {
+                volumeValue.textContent = Math.round(track.volume * 100);
+            }
+            
+            // このトラックの全クリップの波形を更新
+            track.clips.forEach(clip => {
+                this.drawClipWaveform(track.id, clip.id);
+            });
         });
         
         // トラックコンテンツへのドロップ
@@ -571,6 +583,9 @@ class TrackManager {
         const clipGainDb = clip.gain || 0;
         const clipGainLinear = Math.pow(10, clipGainDb / 20);
         
+        // トラックボリュームを取得
+        const trackVolume = track.volume !== undefined ? track.volume : 1.0;
+        
         // トラックエフェクトの影響を計算
         const audioTrack = window.audioEngine.getTrack(trackId);
         let eqMultiplier = 1.0;
@@ -598,8 +613,8 @@ class TrackManager {
             }
         }
         
-        // 総合ゲイン（クリップゲイン × EQ効果）
-        const totalGain = clipGainLinear * eqMultiplier;
+        // 総合ゲイン（クリップゲイン × トラックボリューム × EQ効果）
+        const totalGain = clipGainLinear * trackVolume * eqMultiplier;
         
         // ピークを抽出してエフェクトを適用
         const thresholdLinear = limiterEnabled ? Math.pow(10, limiterThreshold / 20) : 999;

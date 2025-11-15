@@ -308,7 +308,7 @@ class VoiceDramaDAW {
                 tracks: window.trackManager.tracks.map(track => ({
                     id: track.id,
                     name: track.name || '',
-                    volume: track.volume ?? 0.8,
+                    volume: track.volume ?? 1.0,
                     mute: track.mute ?? false,
                     solo: track.solo ?? false,
                     
@@ -687,9 +687,20 @@ class VoiceDramaDAW {
             for (const trackData of projectData.tracks) {
                 const track = window.trackManager.addTrack(trackData.name);
                 if (track) {
-                    track.volume = trackData.volume ?? 0.8;
+                    track.volume = trackData.volume ?? 1.0;
                     track.mute = trackData.mute ?? false;
                     track.solo = trackData.solo ?? false;
+                    
+                    // ボリュームスライダーとUI表示を更新
+                    const volumeSlider = document.querySelector(`.volume-slider[data-track-id="${track.id}"]`);
+                    if (volumeSlider) {
+                        volumeSlider.value = track.volume;
+                    }
+                    const volumeValue = document.querySelector(`[data-track-id="${track.id}"]`)?.querySelector('.volume-value');
+                    if (volumeValue) {
+                        volumeValue.textContent = Math.round(track.volume * 100);
+                    }
+                    window.audioEngine.setTrackVolume(track.id, track.volume);
                     
                     // トラックEQ設定を復元
                     track.eqEnabled = trackData.eqEnabled ?? false;
