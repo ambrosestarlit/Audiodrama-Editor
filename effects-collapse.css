@@ -1,0 +1,47 @@
+/* ==========================================
+   エフェクトセクション折りたたみ機能
+   ========================================== */
+
+.effect-section {
+    position: relative;
+}
+
+.effect-section h3 {
+    display: inline-block;
+    margin: 0;
+}
+
+.section-toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-right: 8px;
+    vertical-align: middle;
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    transition: transform 0.2s ease;
+}
+
+.section-toggle-btn:hover {
+    opacity: 0.7;
+}
+
+.section-toggle-btn.collapsed {
+    transform: rotate(-90deg);
+}
+
+.toggle-icon {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* エフェクトコントロールの表示/非表示アニメーション */
+.eq-controls,
+.noisereduction-controls,
+.expander-controls,
+.limiter-controls {
+    transition: all 0.3s ease;
+}

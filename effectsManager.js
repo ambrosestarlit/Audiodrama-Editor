@@ -30,6 +30,9 @@ class EffectsManager {
             });
         }
         
+        // エフェクトセクションの折りたたみ機能
+        this.setupCollapsibleSections();
+        
         // イコライザー有効化チェックボックス
         const eqEnabledCheckbox = document.getElementById('trackEQEnabled');
         if (eqEnabledCheckbox) {
@@ -665,6 +668,48 @@ class EffectsManager {
         } else {
             fxButton.classList.remove('active');
         }
+    }
+    
+    // 折りたたみ機能の設定
+    setupCollapsibleSections() {
+        const sections = document.querySelectorAll('.effect-section');
+        
+        sections.forEach(section => {
+            const header = section.querySelector('h3');
+            if (!header) return;
+            
+            // 折りたたみボタンを作成
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'section-toggle-btn';
+            toggleBtn.innerHTML = '<img src="open.png" alt="開く" class="toggle-icon">';
+            toggleBtn.type = 'button';
+            
+            // ヘッダーの前にボタンを挿入
+            header.parentNode.insertBefore(toggleBtn, header);
+            
+            // 折りたたみ状態を管理
+            let isCollapsed = false;
+            
+            toggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                isCollapsed = !isCollapsed;
+                
+                // コントロールエリアを取得
+                const controls = section.querySelector('.eq-controls, .noisereduction-controls, .expander-controls, .limiter-controls');
+                
+                if (controls) {
+                    if (isCollapsed) {
+                        controls.style.display = 'none';
+                        toggleBtn.classList.add('collapsed');
+                    } else {
+                        controls.style.display = 'block';
+                        toggleBtn.classList.remove('collapsed');
+                    }
+                }
+            });
+        });
     }
     
     // パネルの開閉
