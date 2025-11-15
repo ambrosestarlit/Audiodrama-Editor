@@ -286,9 +286,13 @@ class VoiceDramaDAW {
                 return;
             }
             
-            // 現在の状態を保存（素材は除外）
+            // 現在の状態を保存（素材とAudioNodeは除外）
             project.tracks = window.trackManager.tracks.map(track => ({
-                ...track,
+                id: track.id,
+                name: track.name,
+                volume: track.volume,
+                mute: track.mute,
+                solo: track.solo,
                 clips: track.clips.map(clip => ({
                     id: clip.id,
                     fileId: clip.fileId,
@@ -299,6 +303,7 @@ class VoiceDramaDAW {
                     fadeIn: clip.fadeIn,
                     fadeOut: clip.fadeOut
                 }))
+                // gain, pan, limiter, eq などのAudioNodeは除外
             }));
             
             // 素材のメタデータのみ保存（AudioBufferは含めない）
