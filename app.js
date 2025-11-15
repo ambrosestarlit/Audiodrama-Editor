@@ -301,9 +301,15 @@ class VoiceDramaDAW {
                 }))
             }));
             
-            // audioFilesをシリアライズ可能な形式に変換
-            const fileList = window.fileManager.exportFileList();
+            // audioFilesをシリアライズ可能な形式に変換（getAllFiles()を使用）
+            const fileList = window.fileManager.getAllFiles();
             project.audioFiles = await Promise.all(fileList.map(async file => {
+                // audioBufferの存在確認
+                if (!file.audioBuffer) {
+                    console.warn('AudioBuffer not found for file:', file.name);
+                    return null;
+                }
+                
                 // AudioBufferをArrayBufferに変換
                 const audioBufferData = this.serializeAudioBuffer(file.audioBuffer);
                 
@@ -316,9 +322,12 @@ class VoiceDramaDAW {
                     numberOfChannels: file.numberOfChannels,
                     fileType: file.fileType,
                     size: file.size,
-                    audioBufferData: audioBufferData // シリアライズされたオーディオデータ
+                    audioBufferData: audioBufferData
                 };
             }));
+            
+            // nullを除外
+            project.audioFiles = project.audioFiles.filter(f => f !== null);
             
             project.effectSettings = window.effectsManager.getEffectSettings();
             project.zoom = window.trackManager.pixelsPerSecond;
