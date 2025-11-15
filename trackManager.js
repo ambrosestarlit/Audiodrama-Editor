@@ -699,8 +699,24 @@ class TrackManager {
         // 波形データを取得
         const audioBuffer = audioFile.audioBuffer;
         const rawData = audioBuffer.getChannelData(0);
+        
+        // オフセットとデュレーションを考慮
+        const offsetSeconds = clip.offset || 0;
+        const visibleDuration = clip.duration - offsetSeconds;
+        
+        // オフセット位置（サンプル数）を計算
+        const sampleRate = audioBuffer.sampleRate;
+        const offsetSamples = Math.floor(offsetSeconds * sampleRate);
+        const visibleSamples = Math.floor(visibleDuration * sampleRate);
+        
+        // 表示するサンプル範囲
+        const startSample = offsetSamples;
+        const endSample = Math.min(offsetSamples + visibleSamples, rawData.length);
+        const actualSamples = endSample - startSample;
+        
+        // キャンバスのサンプル数
         const samples = Math.floor(width / 2);
-        const blockSize = Math.floor(rawData.length / samples);
+        const blockSize = Math.floor(actualSamples / samples);
         const filteredData = [];
         
         // クリップゲインを適用
@@ -744,10 +760,12 @@ class TrackManager {
         const thresholdLinear = limiterEnabled ? Math.pow(10, limiterThreshold / 20) : 999;
         
         for (let i = 0; i < samples; i++) {
-            let blockStart = blockSize * i;
+            let blockStart = startSample + (blockSize * i);  // オフセット位置から開始
             let max = 0;
             for (let j = 0; j < blockSize; j++) {
-                const val = Math.abs(rawData[blockStart + j] || 0) * totalGain;
+                const sampleIndex = blockStart + j;
+                if (sampleIndex >= endSample) break;  // 終了位置を超えたら停止
+                const val = Math.abs(rawData[sampleIndex] || 0) * totalGain;
                 if (val > max) max = val;
             }
             
