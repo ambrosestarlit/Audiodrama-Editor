@@ -32,12 +32,8 @@
     transform: scale(1.1);
 }
 
-.section-toggle-btn.collapsed {
-    transform: rotate(-90deg);
-}
-
-.section-toggle-btn.collapsed:hover {
-    transform: rotate(-90deg) scale(1.1);
+.section-toggle-btn:active {
+    transform: scale(0.95);
 }
 
 .toggle-icon {
@@ -55,4 +51,3 @@
     transition: all 0.3s ease;
     overflow: hidden;
 }
-
