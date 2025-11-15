@@ -569,13 +569,20 @@ class VoiceDramaDAW {
                 throw new Error('ZIPファイル内にassetsフォルダが見つかりません');
             }
             
-            // 既存の素材をクリア（renderFileListを呼ばない方法で）
-            window.fileManager.files = {
-                voice: [],
+            // 既存の素材をクリア
+            window.fileManager.audioFiles = {
+                dialogue: [],
+                sfx: [],
                 bgm: [],
                 ambience: [],
                 effects: []
             };
+            
+            // UIもクリア
+            ['dialogue', 'sfx', 'bgm', 'ambience', 'effects'].forEach(cat => {
+                const list = document.getElementById(`${cat}-list`);
+                if (list) list.innerHTML = '';
+            });
             
             // ZIPから素材を抽出
             const filePromises = [];
@@ -604,12 +611,7 @@ class VoiceDramaDAW {
                         }
                     }
                     
-                    // ファイルマネージャーに追加（renderFileListを呼ばない）
-                    if (!window.fileManager.files[category]) {
-                        window.fileManager.files[category] = [];
-                    }
-                    
-                    window.fileManager.files[category].push({
+                    const fileData = {
                         id: fileId,
                         name: originalName,
                         category: category,
@@ -617,7 +619,19 @@ class VoiceDramaDAW {
                         sampleRate: audioBuffer.sampleRate,
                         numberOfChannels: audioBuffer.numberOfChannels,
                         audioBuffer: audioBuffer
-                    });
+                    };
+                    
+                    // ファイルマネージャーに追加
+                    if (!window.fileManager.audioFiles[category]) {
+                        window.fileManager.audioFiles[category] = [];
+                    }
+                    
+                    window.fileManager.audioFiles[category].push(fileData);
+                    
+                    // UIに表示
+                    if (typeof window.fileManager.renderFileItem === 'function') {
+                        window.fileManager.renderFileItem(fileData);
+                    }
                 });
                 
                 filePromises.push(promise);
