@@ -303,7 +303,6 @@ class VoiceDramaDAW {
                     fadeIn: clip.fadeIn,
                     fadeOut: clip.fadeOut
                 }))
-                // gain, pan, limiter, eq などのAudioNodeは除外
             }));
             
             // 素材のメタデータのみ保存（AudioBufferは含めない）
@@ -319,6 +318,15 @@ class VoiceDramaDAW {
             
             project.effectSettings = window.effectsManager.getEffectSettings();
             project.zoom = window.trackManager.pixelsPerSecond;
+            
+            // JSON化できるかテスト（デバッグ用）
+            try {
+                JSON.stringify(project);
+                console.log('✅ Project is serializable');
+            } catch (e) {
+                console.error('❌ Project cannot be serialized:', e);
+                throw new Error('プロジェクトデータに保存できないオブジェクトが含まれています');
+            }
             
             // IndexedDBに保存
             await window.projectManager.saveProject(project);
