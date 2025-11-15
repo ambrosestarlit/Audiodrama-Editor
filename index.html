@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="responsive.css">
     <link rel="stylesheet" href="effects-collapse.css">
+    <link rel="stylesheet" href="help.css">
 </head>
 <body>
     <div id="app">
@@ -33,6 +34,7 @@
                 <button class="btn btn-primary" id="saveProjectBtn">保存</button>
                 <button class="btn btn-primary" id="loadProjectBtn">読込</button>
                 <button class="btn btn-success" id="exportBtn">書き出し</button>
+                <button class="btn btn-help" id="helpBtn" title="使い方">?</button>
             </div>
         </header>
 
@@ -278,7 +280,7 @@
         </div>
     </div>
 
-    <!-- モーダル：書き出し -->
+    <!-- モーダル:書き出し -->
     <div class="modal" id="exportModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -312,6 +314,318 @@
                     </div>
                 </div>
                 <button class="btn btn-success btn-large" id="startExportBtn">書き出し開始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル:使い方 -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content modal-help">
+            <div class="modal-header">
+                <h2>🐻 Sound Bear 使い方ガイド</h2>
+                <button class="btn-close" id="closeHelpModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="help-tabs">
+                    <button class="help-tab-btn active" data-help-tab="basic">基本操作</button>
+                    <button class="help-tab-btn" data-help-tab="timeline">タイムライン編集</button>
+                    <button class="help-tab-btn" data-help-tab="effects">エフェクト</button>
+                    <button class="help-tab-btn" data-help-tab="export">書き出し</button>
+                    <button class="help-tab-btn" data-help-tab="tips">便利な機能</button>
+                </div>
+                
+                <div class="help-content-area">
+                    <!-- 基本操作 -->
+                    <div class="help-content active" data-help-content="basic">
+                        <h3>🎯 基本操作</h3>
+                        
+                        <div class="help-section">
+                            <h4>1. 音声ファイルの読み込み</h4>
+                            <p>左サイドバーの<strong>「+」ボタン</strong>をクリックして、音声ファイルを読み込みます。</p>
+                            <ul>
+                                <li>対応形式: MP3, WAV, OGG, M4A</li>
+                                <li>複数ファイルの同時読み込みが可能</li>
+                                <li>タブで「台詞」「SE」「BGM」「ME」「その他」に分類</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>2. トラックへの配置</h4>
+                            <p>サイドバーのファイルを<strong>タイムラインにドラッグ&ドロップ</strong>して配置します。</p>
+                            <ul>
+                                <li>ドラッグ中に配置位置がプレビュー表示されます</li>
+                                <li>既存のクリップと重ならないように自動調整されます</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>3. トラックの追加</h4>
+                            <p>タイムライン下部の<strong>「+ トラック追加」</strong>ボタンでトラックを追加できます。</p>
+                            <ul>
+                                <li>最大30トラックまで追加可能</li>
+                                <li>各トラックに名前を設定できます</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>4. プロジェクトの保存</h4>
+                            <p>ヘッダーの<strong>「保存」</strong>ボタンでプロジェクトを保存できます。</p>
+                            <ul>
+                                <li>プロジェクト名をクリックして変更可能</li>
+                                <li>ブラウザのローカルストレージに保存されます</li>
+                                <li>「読込」ボタンで過去のプロジェクトを復元できます</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- タイムライン編集 -->
+                    <div class="help-content" data-help-content="timeline">
+                        <h3>✂️ タイムライン編集</h3>
+                        
+                        <div class="help-section">
+                            <h4>クリップの移動</h4>
+                            <p>クリップをドラッグして、位置を変更できます。</p>
+                            <ul>
+                                <li><strong>横方向:</strong> 時間位置を変更</li>
+                                <li><strong>縦方向:</strong> 異なるトラックへ移動</li>
+                                <li>他のクリップとの重なりは自動的に調整されます</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>トリミング（端のドラッグ）</h4>
+                            <p>クリップの<strong>左右の端</strong>をドラッグして、長さを調整できます。</p>
+                            <ul>
+                                <li>音声の開始・終了位置を変更</li>
+                                <li>波形を見ながら正確にトリミング可能</li>
+                                <li>元の音声ファイルは変更されません</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>クリップゲインの調整</h4>
+                            <p>クリップを<strong>ダブルクリック</strong>すると、ゲイン調整パネルが表示されます。</p>
+                            <ul>
+                                <li>±24 dBの範囲で音量を調整</li>
+                                <li>現在のピークと調整後のピークを確認できます</li>
+                                <li>プリセットボタンで素早く設定可能</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>再生コントロール</h4>
+                            <ul>
+                                <li><strong>再生:</strong> ▶ボタンまたはスペースキー</li>
+                                <li><strong>一時停止:</strong> ⏸ボタンまたはスペースキー</li>
+                                <li><strong>停止:</strong> ⏹ボタン（最初に戻る）</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>ズーム操作</h4>
+                            <ul>
+                                <li><strong>+ボタン:</strong> タイムラインを拡大</li>
+                                <li><strong>-ボタン:</strong> タイムラインを縮小</li>
+                                <li><strong>全体ボタン:</strong> すべてのクリップが表示されるように調整</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>元に戻す / やり直す</h4>
+                            <ul>
+                                <li><strong>Ctrl/Cmd + Z:</strong> 元に戻す</li>
+                                <li><strong>Ctrl/Cmd + Y:</strong> やり直す</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- エフェクト -->
+                    <div class="help-content" data-help-content="effects">
+                        <h3>🎛️ エフェクト</h3>
+                        
+                        <div class="help-section">
+                            <h4>エフェクトパネルの表示</h4>
+                            <p>トラック名の横にある<strong>「⚙️」ボタン</strong>をクリックすると、エフェクトパネルが表示されます。</p>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>イコライザー (EQ)</h4>
+                            <p>音質を調整するためのエフェクトです。</p>
+                            <ul>
+                                <li><strong>Low (100Hz):</strong> 低音の調整</li>
+                                <li><strong>Mid (1kHz):</strong> 中音の調整</li>
+                                <li><strong>High (10kHz):</strong> 高音の調整</li>
+                            </ul>
+                            <p><strong>プリセット:</strong></p>
+                            <ul>
+                                <li><strong>フラット:</strong> すべて 0 dB (デフォルト)</li>
+                                <li><strong>電話風:</strong> 中音域を強調、電話越しの音</li>
+                                <li><strong>クリア:</strong> 高音を強調、クリアな音</li>
+                                <li><strong>壁越し:</strong> 高音をカット、こもった音</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>リミッター</h4>
+                            <p>音量が大きすぎる部分を抑えるエフェクトです。</p>
+                            <ul>
+                                <li><strong>Threshold:</strong> 制限を開始する音量レベル</li>
+                                <li><strong>Knee:</strong> 制限の掛かり方の滑らかさ</li>
+                                <li><strong>Release:</strong> 制限が解除される速度</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>コンプレッサー</h4>
+                            <p>音量差を均一にするエフェクトです。</p>
+                            <ul>
+                                <li><strong>Threshold:</strong> 圧縮を開始する音量レベル</li>
+                                <li><strong>Ratio:</strong> 圧縮の強さ (2:1～20:1)</li>
+                                <li><strong>Attack:</strong> 圧縮が掛かる速度</li>
+                                <li><strong>Release:</strong> 圧縮が解除される速度</li>
+                                <li><strong>Knee:</strong> 圧縮の掛かり方の滑らかさ</li>
+                                <li><strong>Makeup Gain:</strong> 圧縮後の音量補正</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>帯域カット (ノイズリダクション)</h4>
+                            <p>特定の周波数帯をカットしてノイズを軽減します。</p>
+                            <p><strong>ハイパスフィルタ (低音カット):</strong></p>
+                            <ul>
+                                <li>エアコン音、風切り音などの低音ノイズを除去</li>
+                                <li>カットオフ周波数: 20～500 Hz</li>
+                            </ul>
+                            <p><strong>ローパスフィルタ (高音カット):</strong></p>
+                            <ul>
+                                <li>サーッという高音ノイズを除去</li>
+                                <li>カットオフ周波数: 1000～20000 Hz</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- 書き出し -->
+                    <div class="help-content" data-help-content="export">
+                        <h3>💾 書き出し</h3>
+                        
+                        <div class="help-section">
+                            <h4>書き出し手順</h4>
+                            <ol>
+                                <li>ヘッダーの<strong>「書き出し」</strong>ボタンをクリック</li>
+                                <li>ファイル形式を選択 (WAV または MP3)</li>
+                                <li>サンプルレートとビットデプスを選択</li>
+                                <li><strong>「書き出し開始」</strong>ボタンをクリック</li>
+                                <li>ダウンロードが自動的に開始されます</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>推奨設定</h4>
+                            <p><strong>高音質版 (マスター音源):</strong></p>
+                            <ul>
+                                <li>形式: WAV</li>
+                                <li>サンプルレート: 48 kHz</li>
+                                <li>ビットデプス: 24 bit</li>
+                            </ul>
+                            <p><strong>配信用:</strong></p>
+                            <ul>
+                                <li>形式: MP3</li>
+                                <li>サンプルレート: 44.1 kHz または 48 kHz</li>
+                                <li>ビットデプス: 16 bit</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>注意事項</h4>
+                            <ul>
+                                <li>書き出しには時間がかかる場合があります</li>
+                                <li>ブラウザのポップアップブロックを解除してください</li>
+                                <li>エフェクト処理もすべて適用されます</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- 便利な機能 -->
+                    <div class="help-content" data-help-content="tips">
+                        <h3>💡 便利な機能・ヒント</h3>
+                        
+                        <div class="help-section">
+                            <h4>キーボードショートカット</h4>
+                            <ul>
+                                <li><strong>スペース:</strong> 再生 / 一時停止</li>
+                                <li><strong>Ctrl/Cmd + Z:</strong> 元に戻す</li>
+                                <li><strong>Ctrl/Cmd + Y:</strong> やり直す</li>
+                                <li><strong>Delete:</strong> 選択中のクリップを削除</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>ファイル管理のコツ</h4>
+                            <ul>
+                                <li>台詞ファイルは「台詞」タブに、BGMは「BGM」タブに分類すると管理しやすい</li>
+                                <li>ファイル名は分かりやすいものにしておくと便利</li>
+                                <li>不要なファイルは「-」ボタンで削除できます</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>トラックの整理</h4>
+                            <ul>
+                                <li>トラック名をダブルクリックして編集できます</li>
+                                <li>用途別にトラックを分けると編集しやすくなります<br>
+                                    (例: 「キャラA」「キャラB」「効果音」「BGM」など)</li>
+                                <li>トラックの削除は、トラック名横の「✕」ボタンから</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>波形表示の活用</h4>
+                            <ul>
+                                <li>波形を見ることで、音の大きさやタイミングが分かります</li>
+                                <li>無音部分を削除して、テンポよく編集できます</li>
+                                <li>ズームを調整して、細かい編集が可能です</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>エフェクトの使い方のコツ</h4>
+                            <ul>
+                                <li>エフェクトは控えめに使うのがコツ</li>
+                                <li>まずリミッターで音割れを防止</li>
+                                <li>次にコンプレッサーで音量を均一に</li>
+                                <li>最後にEQで音質を調整</li>
+                                <li>ノイズが気になる場合は帯域カットを使用</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>パフォーマンスのヒント</h4>
+                            <ul>
+                                <li>大量のクリップを扱う場合、ズームアウトすると軽くなります</li>
+                                <li>再生が重い場合は、エフェクトを一時的にオフに</li>
+                                <li>定期的にプロジェクトを保存しましょう</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="help-section">
+                            <h4>トラブルシューティング</h4>
+                            <ul>
+                                <li><strong>音が出ない:</strong> ブラウザの音量設定を確認</li>
+                                <li><strong>ファイルが読み込めない:</strong> 対応形式か確認 (MP3, WAV, OGG, M4A)</li>
+                                <li><strong>書き出せない:</strong> ブラウザのポップアップブロックを解除</li>
+                                <li><strong>動作が重い:</strong> ブラウザのタブを閉じて、メモリを解放</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="help-footer">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="dontShowHelpAgain">
+                        <span>次回から自動的に表示しない</span>
+                    </label>
+                    <button class="btn btn-primary" id="closeHelpFooterBtn">閉じる</button>
+                </div>
             </div>
         </div>
     </div>
@@ -359,6 +673,7 @@
     <script src="effectsManager.js"></script>
     <script src="exportManager.js"></script>
     <script src="sliderUtils.js"></script>
+    <script src="helpSystem.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
