@@ -33,45 +33,12 @@ class KeyframeEditorUI {
                 default: 0,
                 unit: ' dB',
                 label: 'ゲイン'
-            },
-            eqLow: {
-                min: -24,
-                max: 24,
-                default: 0,
-                unit: ' dB',
-                label: 'EQ Low'
-            },
-            eqMid: {
-                min: -24,
-                max: 24,
-                default: 0,
-                unit: ' dB',
-                label: 'EQ Mid'
-            },
-            eqHigh: {
-                min: -24,
-                max: 24,
-                default: 0,
-                unit: ' dB',
-                label: 'EQ High'
-            },
-            limiterThreshold: {
-                min: -24,
-                max: 0,
-                default: -6,
-                unit: ' dB',
-                label: 'Limiter Threshold'
             }
         };
     }
     
     init() {
         this.canvas = document.getElementById('keyframeCanvas');
-        if (!this.canvas) {
-            console.error('キーフレームキャンバスが見つかりません');
-            return;
-        }
-        
         this.ctx = this.canvas.getContext('2d');
         
         // 高DPI対応
@@ -82,7 +49,6 @@ class KeyframeEditorUI {
         this.ctx.scale(dpr, dpr);
         
         this.setupEvents();
-        console.log('KeyframeEditorUI initialized');
     }
     
     setupEvents() {
@@ -118,21 +84,20 @@ class KeyframeEditorUI {
                     this.selectedKeyframe.id,
                     { interpolation: e.target.value }
                 );
+                
+                // 波形を更新（ゲインとボリュームの場合のみ）
+                if (this.currentParameter === 'gain' || this.currentParameter === 'volume') {
+                    this.updateClipWaveform();
+                }
+                
                 this.render();
             }
         });
     }
     
     open(clip) {
-        console.log('キーフレームエディタを開く:', clip);
         this.currentClip = clip;
         this.selectedKeyframe = null;
-        this.currentParameter = 'volume'; // デフォルトパラメータをリセット
-        
-        // タブをリセット
-        document.querySelectorAll('.keyframe-tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('.keyframe-tab-btn[data-param="volume"]')?.classList.add('active');
-        
         document.getElementById('keyframeEditorPopup').style.display = 'flex';
         document.getElementById('keyframeEditorTitle').textContent = `🎬 ${clip.name} - キーフレーム`;
         this.render();
@@ -364,34 +329,43 @@ class KeyframeEditorUI {
             this.currentParameter
         ).find(kf => kf.id === this.selectedKeyframe.id);
         
+        // 波形を更新（ゲインとボリュームの場合のみ）
+        if (this.currentParameter === 'gain' || this.currentParameter === 'volume') {
+            this.updateClipWaveform();
+        }
+        
         this.render();
     }
     
     onCanvasMouseUp() {
+        // ドラッグ終了時にも波形を更新
+        if (this.isDragging && (this.currentParameter === 'gain' || this.currentParameter === 'volume')) {
+            this.updateClipWaveform();
+        }
         this.isDragging = false;
     }
     
-    onCanvasDoubleClick(e) {
-        console.log('ダブルクリック検出');
+    // クリップの波形を更新
+    updateClipWaveform() {
+        if (!this.currentClip) return;
         
-        if (!this.currentClip) {
-            console.error('currentClipが設定されていません');
-            return;
+        // trackManagerを通じて波形を再描画
+        const trackId = window.trackManager.tracks.find(track => 
+            track.clips.some(clip => clip.id === this.currentClip.id)
+        )?.id;
+        
+        if (trackId) {
+            window.trackManager.drawClipWaveform(trackId, this.currentClip.id);
         }
-        
+    }
+    
+    onCanvasDoubleClick(e) {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
         const time = this.xToTime(x, rect.width);
         const value = this.yToValue(y, rect.height);
-        
-        console.log('キーフレーム追加:', {
-            clipId: this.currentClip.id,
-            parameter: this.currentParameter,
-            time: time,
-            value: value
-        });
         
         const kf = window.keyframeManager.addKeyframe(
             this.currentClip.id,
@@ -401,27 +375,21 @@ class KeyframeEditorUI {
             'linear'
         );
         
-        console.log('追加されたキーフレーム:', kf);
-        
         this.selectedKeyframe = kf;
+        
+        // 波形を更新（ゲインとボリュームの場合のみ）
+        if (this.currentParameter === 'gain' || this.currentParameter === 'volume') {
+            this.updateClipWaveform();
+        }
+        
         this.render();
     }
     
     addKeyframeAtCurrentTime() {
-        if (!this.currentClip) {
-            console.error('currentClipが設定されていません');
-            return;
-        }
+        if (!this.currentClip) return;
         
         const time = window.audioEngine.currentTime;
         const config = this.parameterConfig[this.currentParameter];
-        
-        console.log('現在位置にキーフレーム追加:', {
-            clipId: this.currentClip.id,
-            parameter: this.currentParameter,
-            time: time,
-            defaultValue: config.default
-        });
         
         const kf = window.keyframeManager.addKeyframe(
             this.currentClip.id,
@@ -431,9 +399,13 @@ class KeyframeEditorUI {
             'linear'
         );
         
-        console.log('追加されたキーフレーム:', kf);
-        
         this.selectedKeyframe = kf;
+        
+        // 波形を更新（ゲインとボリュームの場合のみ）
+        if (this.currentParameter === 'gain' || this.currentParameter === 'volume') {
+            this.updateClipWaveform();
+        }
+        
         this.render();
     }
     
@@ -449,6 +421,12 @@ class KeyframeEditorUI {
         this.selectedKeyframe = null;
         document.getElementById('deleteKeyframeBtn').disabled = true;
         document.getElementById('keyframeInterpolation').disabled = true;
+        
+        // 波形を更新（ゲインとボリュームの場合のみ）
+        if (this.currentParameter === 'gain' || this.currentParameter === 'volume') {
+            this.updateClipWaveform();
+        }
+        
         this.render();
     }
     
@@ -461,6 +439,12 @@ class KeyframeEditorUI {
                 this.currentParameter
             );
             this.selectedKeyframe = null;
+            
+            // 波形を更新（ゲインとボリュームの場合のみ）
+            if (this.currentParameter === 'gain' || this.currentParameter === 'volume') {
+                this.updateClipWaveform();
+            }
+            
             this.render();
         }
     }

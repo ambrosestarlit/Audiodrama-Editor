@@ -77,13 +77,23 @@ class KeyframeManager {
         
         const keyframes = clipKeyframes[parameter];
         
-        // 最初のキーフレームより前
-        if (time <= keyframes[0].time) {
+        // 最初のキーフレームより前 → デフォルト値
+        if (time < keyframes[0].time) {
+            return defaultValue;
+        }
+        
+        // 最後のキーフレームより後 → デフォルト値
+        if (time > keyframes[keyframes.length - 1].time) {
+            return defaultValue;
+        }
+        
+        // ちょうど最初のキーフレームの時間
+        if (time === keyframes[0].time) {
             return keyframes[0].value;
         }
         
-        // 最後のキーフレームより後
-        if (time >= keyframes[keyframes.length - 1].time) {
+        // ちょうど最後のキーフレームの時間
+        if (time === keyframes[keyframes.length - 1].time) {
             return keyframes[keyframes.length - 1].value;
         }
         
@@ -98,6 +108,40 @@ class KeyframeManager {
         }
         
         return defaultValue;
+    }
+    
+    // 指定時間がキーフレームの影響範囲内か判定し、範囲内なら補間値を返す
+    getValueAtTimeInRange(clipId, parameter, time, defaultValue = 0) {
+        const clipKeyframes = this.keyframes.get(clipId);
+        if (!clipKeyframes || !clipKeyframes[parameter] || clipKeyframes[parameter].length === 0) {
+            return { inRange: false, value: defaultValue };
+        }
+        
+        const keyframes = clipKeyframes[parameter];
+        
+        // デバッグ：配列の状態を出力
+        console.log(`📋 Keyframe array for ${parameter}:`, keyframes.map(k => `t=${k.time.toFixed(2)}:v=${k.value}`).join(', '));
+        
+        const firstTime = keyframes[0].time;
+        const lastTime = keyframes[keyframes.length - 1].time;
+        
+        console.log(`🔍 inRange check: time=${time.toFixed(3)}, first=${firstTime.toFixed(3)}, last=${lastTime.toFixed(3)}`);
+        
+        // 最初のキーフレームより前 → 範囲外
+        if (time < firstTime) {
+            console.log(`  → 範囲外(前): ${time} < ${firstTime}, デフォルト値=${defaultValue}を使用`);
+            return { inRange: false, value: defaultValue };
+        }
+        
+        // 最後のキーフレーム以降 → 範囲外（デフォルト値に戻す）
+        if (time > lastTime) {
+            console.log(`  → 範囲外(後): ${time} > ${lastTime}, デフォルト値=${defaultValue}を使用`);
+            return { inRange: false, value: defaultValue };
+        }
+        
+        // キーフレーム範囲内（firstTime <= time <= lastTime）：補間値を返す
+        console.log(`  → 範囲内! 補間値を計算`);
+        return { inRange: true, value: this.getValueAtTime(clipId, parameter, time, defaultValue) };
     }
     
     // 補間計算

@@ -7,6 +7,11 @@ class VoiceDramaDAW {
         this.isPlaying = false;
         this.animationId = null;
         this.pendingProject = null; // 素材ZIP読み込み待ちのプロジェクト
+        
+        // アンドゥ/リドゥ用の履歴
+        this.history = [];
+        this.historyIndex = -1;
+        this.isLoadingHistory = false; // 履歴復元中フラグ
     }
     
     // 初期化
@@ -22,9 +27,8 @@ class VoiceDramaDAW {
                 'effectsManager',
                 'exportManager',
                 'trackManager',
-                'historyManager',
                 'keyframeManager',
-                'keyframeEditorUI'
+                'timelineKeyframeUI'
             ];
             
             const missingManagers = requiredManagers.filter(manager => !window[manager]);
@@ -62,11 +66,11 @@ class VoiceDramaDAW {
             }
             
             try {
-                console.log('Initializing keyframeEditorUI...');
-                window.keyframeEditorUI.init();
-                console.log('✓ keyframeEditorUI initialized');
+                console.log('Initializing timelineKeyframeUI...');
+                window.timelineKeyframeUI.init();
+                console.log('✓ timelineKeyframeUI initialized');
             } catch (error) {
-                console.error('✗ keyframeEditorUI initialization failed:', error);
+                console.error('✗ timelineKeyframeUI initialization failed:', error);
                 throw error;
             }
             
@@ -79,6 +83,14 @@ class VoiceDramaDAW {
             console.log('Creating new project...');
             this.createNewProject();
             console.log('✓ New project created');
+            
+            // プレイヘッドを最初から作成
+            this.createPlayhead();
+            console.log('✓ Playhead created');
+            
+            // タイムラインクリックで時間移動
+            this.setupTimelineClick();
+            console.log('✓ Timeline click setup');
             
             console.log('✓ VoiceDrama DAW initialized successfully');
         } catch (error) {
@@ -193,11 +205,24 @@ class VoiceDramaDAW {
         
         // アンドゥ・リドゥ
         document.getElementById('undoBtn')?.addEventListener('click', () => {
-            window.historyManager.undo();
+            this.undo();
         });
         
         document.getElementById('redoBtn')?.addEventListener('click', () => {
-            window.historyManager.redo();
+            this.redo();
+        });
+        
+        // キーボードショートカット（Ctrl+Z / Ctrl+Y）
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.undo();
+                } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+                    e.preventDefault();
+                    this.redo();
+                }
+            }
         });
         
         // トランスポートコントロール
@@ -313,6 +338,9 @@ class VoiceDramaDAW {
         if (window.trackManager) {
             window.trackManager.addTrack('メイントラック');
         }
+        
+        // 初期履歴を保存
+        this.saveHistory();
     }
     
     // プロジェクト保存
@@ -939,6 +967,16 @@ class VoiceDramaDAW {
                     this.updateTimeDisplay();
                     this.updatePlayhead();
                     
+                    // キーフレームに合わせてスライダーを更新
+                    this.updateSlidersFromKeyframes();
+                    
+                    // 🐻 キーフレーム値をAudio Nodeに適用
+                    // 注意: この処理は不要です!
+                    // audioEngine.jsのapplyKeyframeAutomation()が再生開始時に
+                    // Web Audio APIのタイムラインを使ってキーフレームを設定済み。
+                    // ここで値を上書きするとタイムラインが破壊されます!
+                    // this.applyKeyframesToAudioNodes();
+                    
                     // 終了チェック
                     if (window.audioEngine.currentTime >= window.audioEngine.duration) {
                         this.stop();
@@ -964,18 +1002,55 @@ class VoiceDramaDAW {
         }
     }
     
+    // タイムラインクリックで時間移動
+    setupTimelineClick() {
+        const tracksContainer = document.getElementById('tracksContainer');
+        if (!tracksContainer) return;
+        
+        tracksContainer.addEventListener('click', (e) => {
+            // プレイヘッド自体のクリックは無視
+            if (e.target.classList.contains('playhead')) return;
+            
+            const trackHeader = document.querySelector('.track-header');
+            const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+            
+            const rect = tracksContainer.getBoundingClientRect();
+            const x = e.clientX - rect.left - headerWidth;
+            
+            if (x < 0) return; // ヘッダー部分のクリックは無視
+            
+            const time = Math.max(0, x / window.trackManager.pixelsPerSecond);
+            // 🐻 音声がない場合でも最低30秒は動かせるように
+            const maxTime = window.audioEngine.duration || 30;
+            
+            window.audioEngine.currentTime = Math.min(time, maxTime);
+            this.updatePlayhead();
+            this.updateTimeDisplay();
+            
+            console.log(`⏱️ Timeline clicked: time=${time.toFixed(2)}s`);
+        });
+    }
+    
     // プレイヘッドを作成
     createPlayhead() {
         // 既存のプレイヘッドを削除
         const existing = document.querySelector('.playhead');
-        if (existing) return; // 既に存在する場合は何もしない
+        if (existing) {
+            console.log('⚠️ Playhead already exists, skipping creation');
+            return; // 既に存在する場合は何もしない
+        }
         
         const tracksContainer = document.getElementById('tracksContainer');
-        if (!tracksContainer) return;
+        if (!tracksContainer) {
+            console.log('⚠️ tracksContainer not found');
+            return;
+        }
         
         // track-headerの実際の幅を取得
         const trackHeader = document.querySelector('.track-header');
         const headerWidth = trackHeader ? trackHeader.offsetWidth : 240;
+        
+        console.log(`✅ Creating playhead at ${headerWidth}px`);
         
         const playhead = document.createElement('div');
         playhead.className = 'playhead';
@@ -984,6 +1059,7 @@ class VoiceDramaDAW {
         
         // ドラッグ機能を追加
         this.setupPlayheadDrag(playhead);
+        console.log('✅ Playhead drag setup complete');
     }
     
     // プレイヘッドのドラッグ機能を設定
@@ -992,11 +1068,10 @@ class VoiceDramaDAW {
         let wasPlaying = false;
         
         const onMouseDown = (e) => {
-            // ▽部分（::before擬似要素）のクリック判定
-            // クリック位置が上部8px以内なら▽部分
-            const rect = playhead.getBoundingClientRect();
-            if (e.clientY > rect.top + 8) return;
+            // プレイヘッド自体がクリックされたかチェック
+            if (e.target !== playhead) return;
             
+            console.log('✅ くまさんドラッグ開始');
             isDragging = true;
             wasPlaying = this.isPlaying;
             
@@ -1007,10 +1082,13 @@ class VoiceDramaDAW {
             
             playhead.classList.add('dragging');
             e.preventDefault();
+            e.stopPropagation();
         };
         
         const onMouseMove = (e) => {
             if (!isDragging) return;
+            
+            console.log('🖱️ Mouse move during drag');
             
             const tracksContainer = document.getElementById('tracksContainer');
             const trackHeader = document.querySelector('.track-header');
@@ -1020,8 +1098,10 @@ class VoiceDramaDAW {
             const x = e.clientX - rect.left - headerWidth;
             const time = Math.max(0, x / window.trackManager.pixelsPerSecond);
             
-            // 最大時間を超えないように
-            const maxTime = window.audioEngine.duration;
+            console.log(`  時間更新: ${time.toFixed(2)}s`);
+            
+            // 🐻 音声がない場合でも最低30秒は動かせるように
+            const maxTime = window.audioEngine.duration || 30;
             window.audioEngine.currentTime = Math.min(time, maxTime);
             
             this.updatePlayhead();
@@ -1097,6 +1177,216 @@ class VoiceDramaDAW {
         
         window.trackManager.setZoom(Math.max(25, Math.min(400, pixelsPerSecond)));
     }
+    
+    // キーフレームに合わせてスライダーを更新
+    updateSlidersFromKeyframes() {
+        if (!window.timelineKeyframeUI) return;
+        if (!window.timelineKeyframeUI.selectedClip) return;
+        
+        const clip = window.timelineKeyframeUI.selectedClip;
+        const trackId = window.timelineKeyframeUI.selectedTrackId;
+        
+        if (!clip || !trackId) return;
+        
+        const currentTime = window.audioEngine.currentTime;
+        const relativeTime = currentTime - clip.startTime;
+        
+        // クリップの範囲外ならスキップ
+        if (relativeTime < 0 || relativeTime > clip.duration) return;
+        
+        const trackElement = document.querySelector(`[data-track-id="${trackId}"]`);
+        if (!trackElement) return;
+        
+        // Volume
+        const volumeValue = this.getKeyframeValueAtTime(clip.id, 'volume', relativeTime);
+        if (volumeValue !== null) {
+            const volumeSlider = trackElement.querySelector('.volume-slider');
+            const volumeValueDisplay = trackElement.querySelector('.volume-value');
+            if (volumeSlider) {
+                volumeSlider.value = volumeValue;
+                if (volumeValueDisplay) {
+                    volumeValueDisplay.textContent = Math.round(volumeValue);
+                }
+            }
+        }
+        
+        // Pan
+        const panValue = this.getKeyframeValueAtTime(clip.id, 'pan', relativeTime);
+        if (panValue !== null) {
+            const panSlider = trackElement.querySelector('.pan-slider');
+            const panValueDisplay = trackElement.querySelector('.pan-value');
+            if (panSlider) {
+                panSlider.value = panValue;
+                if (panValueDisplay) {
+                    const panText = panValue === 0 ? 'C' : (panValue > 0 ? `R${Math.round(panValue)}` : `L${Math.round(Math.abs(panValue))}`);
+                    panValueDisplay.textContent = panText;
+                }
+            }
+        }
+        
+        // Gain
+        const gainValue = this.getKeyframeValueAtTime(clip.id, 'gain', relativeTime);
+        if (gainValue !== null) {
+            const gainSlider = document.getElementById('clipGainSlider');
+            const gainValueDisplay = document.getElementById('clipGainValue');
+            if (gainSlider) {
+                gainSlider.value = gainValue;
+                if (gainValueDisplay) {
+                    gainValueDisplay.textContent = `${gainValue >= 0 ? '+' : ''}${gainValue.toFixed(1)} dB`;
+                }
+            }
+        }
+    }
+    
+    // 指定時間でのキーフレーム値を取得（補間あり）
+    getKeyframeValueAtTime(clipId, parameter, time) {
+        if (!window.keyframeManager) return null;
+        
+        const keyframes = window.keyframeManager.getParameterKeyframes(clipId, parameter);
+        if (keyframes.length === 0) return null;
+        
+        // 最初のキーフレームより前
+        if (time < keyframes[0].time) {
+            return keyframes[0].value;
+        }
+        
+        // 最後のキーフレームより後
+        if (time >= keyframes[keyframes.length - 1].time) {
+            return keyframes[keyframes.length - 1].value;
+        }
+        
+        // キーフレーム間を補間
+        for (let i = 0; i < keyframes.length - 1; i++) {
+            const kf1 = keyframes[i];
+            const kf2 = keyframes[i + 1];
+            
+            if (time >= kf1.time && time <= kf2.time) {
+                // 線形補間
+                const ratio = (time - kf1.time) / (kf2.time - kf1.time);
+                return kf1.value + (kf2.value - kf1.value) * ratio;
+            }
+        }
+        
+        return null;
+    }
+    
+    // キーフレーム値をAudio Nodeに適用
+    applyKeyframesToAudioNodes() {
+        const currentTime = window.audioEngine.currentTime;
+        
+        // 全トラックの全クリップをチェック
+        window.audioEngine.tracks.forEach(track => {
+            track.clips.forEach(clip => {
+                if (!clip.activeNodes) {
+                    console.log(`⚠️ No activeNodes for clip ${clip.id}`);
+                    return;
+                }
+                
+                const localTime = currentTime - clip.startTime;
+                
+                // クリップの再生範囲内かチェック
+                if (localTime < 0 || localTime > clip.duration) return;
+                
+                console.log(`🎵 Applying keyframes for clip ${clip.id} at localTime ${localTime.toFixed(2)}s`);
+                
+                // Pan
+                const panValue = this.getKeyframeValueAtTime(clip.id, 'pan', localTime);
+                console.log(`  Pan value: ${panValue}`);
+                if (panValue !== null && clip.activeNodes.panNode) {
+                    clip.activeNodes.panNode.pan.value = panValue;
+                    console.log(`  🎚️ Pan applied: ${panValue}`);
+                }
+            });
+        });
+    }
+    
+    // 履歴を保存
+    saveHistory() {
+        if (this.isLoadingHistory) return; // 履歴復元中は保存しない
+        
+        // キーフレームデータを取得
+        const keyframesData = {};
+        if (window.keyframeManager && window.keyframeManager.keyframes) {
+            window.keyframeManager.keyframes.forEach((clipKeyframes, clipId) => {
+                keyframesData[clipId] = clipKeyframes;
+            });
+        }
+        
+        const state = JSON.stringify({
+            keyframes: keyframesData,
+            currentTime: window.audioEngine.currentTime
+        });
+        
+        // 現在位置より後の履歴を削除
+        this.history = this.history.slice(0, this.historyIndex + 1);
+        this.history.push(state);
+        this.historyIndex++;
+        
+        // 履歴が50を超えたら古いものを削除
+        if (this.history.length > 50) {
+            this.history.shift();
+            this.historyIndex--;
+        }
+        
+        console.log(`💾 History saved: index=${this.historyIndex}, total=${this.history.length}`);
+    }
+    
+    // アンドゥ
+    undo() {
+        if (this.historyIndex > 0) {
+            this.historyIndex--;
+            this.loadHistory();
+            console.log(`↩️ Undo: index=${this.historyIndex}`);
+        } else {
+            console.log(`↩️ Undo: 履歴の最初です`);
+        }
+    }
+    
+    // リドゥ
+    redo() {
+        if (this.historyIndex < this.history.length - 1) {
+            this.historyIndex++;
+            this.loadHistory();
+            console.log(`↪️ Redo: index=${this.historyIndex}`);
+        } else {
+            console.log(`↪️ Redo: 履歴の最後です`);
+        }
+    }
+    
+    // 履歴を復元
+    loadHistory() {
+        this.isLoadingHistory = true;
+        
+        const state = JSON.parse(this.history[this.historyIndex]);
+        
+        // キーフレームを復元
+        if (window.keyframeManager) {
+            window.keyframeManager.keyframes.clear();
+            
+            Object.keys(state.keyframes).forEach(clipId => {
+                const clipKeyframes = state.keyframes[clipId];
+                window.keyframeManager.keyframes.set(parseInt(clipId), clipKeyframes);
+            });
+            
+            // UIを更新
+            if (window.timelineKeyframeUI && window.timelineKeyframeUI.selectedClip) {
+                window.timelineKeyframeUI.renderKeyframesForClip(
+                    window.timelineKeyframeUI.selectedClip.id,
+                    window.timelineKeyframeUI.selectedTrackId
+                );
+            }
+        }
+        
+        // 現在時刻を復元
+        if (state.currentTime !== undefined) {
+            window.audioEngine.currentTime = state.currentTime;
+            this.updateTimeDisplay();
+            this.updatePlayhead();
+        }
+        
+        this.isLoadingHistory = false;
+        console.log(`📖 History loaded: keyframes=${Object.keys(state.keyframes).length} clips`);
+    }
 }
 
 // アプリケーション起動
@@ -1113,3 +1403,4 @@ if (document.readyState === 'loading') {
 
 // グローバルに公開
 window.voiceDramaDAW = app;
+window.app = app; // timelineKeyframeUI.jsから参照できるように

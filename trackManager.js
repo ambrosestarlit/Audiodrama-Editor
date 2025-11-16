@@ -14,6 +14,10 @@ class TrackManager {
         this.dragTarget = null;
         this.dragStartX = 0;
         this.dragStartTime = 0;
+        
+        // イベントハンドラの参照を保持（バインド済み）
+        this.boundHandleDrag = this.handleDrag.bind(this);
+        this.boundEndDrag = this.endDrag.bind(this);
     }
     
     // トラック追加
@@ -156,6 +160,15 @@ class TrackManager {
         // ボリュームスライダー
         const volumeSlider = trackElement.querySelector('.volume-slider');
         volumeSlider.addEventListener('input', (e) => {
+            // 🐻 キーフレーム記録モード中はトラックボリュームを変更しない
+            // スライダーの値はキーフレームとして記録される
+            if (window.timelineKeyframeUI && 
+                window.timelineKeyframeUI.selectedClip && 
+                window.timelineKeyframeUI.selectedTrackId === track.id) {
+                console.log(`⏸️ キーフレーム記録モード中: トラックボリューム変更をスキップ`);
+                return; // トラックボリュームは変更せず、キーフレームだけ記録
+            }
+            
             track.volume = parseFloat(e.target.value);
             window.audioEngine.setTrackVolume(track.id, track.volume);
             
@@ -189,6 +202,14 @@ class TrackManager {
         updatePanDisplay(track.pan);
         
         panSlider.addEventListener('input', (e) => {
+            // 🐻 キーフレーム記録モード中はトラックパンを変更しない
+            if (window.timelineKeyframeUI && 
+                window.timelineKeyframeUI.selectedClip && 
+                window.timelineKeyframeUI.selectedTrackId === track.id) {
+                console.log(`⏸️ キーフレーム記録モード中: トラックパン変更をスキップ`);
+                return; // トラックパンは変更せず、キーフレームだけ記録
+            }
+            
             track.pan = parseFloat(e.target.value);
             window.audioEngine.setTrackPan(track.id, track.pan);
             updatePanDisplay(track.pan);
@@ -330,9 +351,6 @@ class TrackManager {
         menu.style.top = `${e.pageY}px`;
         
         menu.innerHTML = `
-            <div class="context-menu-item" data-action="keyframe">
-                🎬 キーフレームエディタ
-            </div>
             <div class="context-menu-item" data-action="gain">
                 🎚️ ゲイン調整
             </div>
@@ -350,9 +368,6 @@ class TrackManager {
                 const action = item.dataset.action;
                 
                 switch (action) {
-                    case 'keyframe':
-                        window.keyframeEditorUI.open(clip);
-                        break;
                     case 'gain':
                         this.openClipGainPopup(trackId, clip.id);
                         break;
@@ -418,6 +433,13 @@ class TrackManager {
         if (clipElement) {
             clipElement.classList.add('selected');
             this.selectedClip = { trackId, clipId };
+            
+            // キーフレーム自動記録を有効化
+            const track = this.getTrack(trackId);
+            const clip = track?.clips.find(c => c.id === clipId);
+            if (clip && window.timelineKeyframeUI) {
+                window.timelineKeyframeUI.enableKeyframeRecording(clip, trackId);
+            }
         }
     }
     
@@ -428,8 +450,8 @@ class TrackManager {
         this.dragStartX = e.clientX;
         this.dragStartTime = clip.startTime;
         
-        document.addEventListener('mousemove', this.handleDrag.bind(this));
-        document.addEventListener('mouseup', this.endDrag.bind(this));
+        document.addEventListener('mousemove', this.boundHandleDrag);
+        document.addEventListener('mouseup', this.boundEndDrag);
         
         e.preventDefault();
     }
@@ -472,8 +494,8 @@ class TrackManager {
         this.isDragging = false;
         this.dragTarget = null;
         
-        document.removeEventListener('mousemove', this.handleDrag.bind(this));
-        document.removeEventListener('mouseup', this.endDrag.bind(this));
+        document.removeEventListener('mousemove', this.boundHandleDrag);
+        document.removeEventListener('mouseup', this.boundEndDrag);
     }
     
     // クリップ衝突検出と自動トリミング
@@ -857,19 +879,77 @@ class TrackManager {
             }
         }
         
-        // 総合ゲイン（クリップゲイン × トラックボリューム × EQ効果）
+        // 総合ゲイン(クリップゲイン × トラックボリューム × EQ効果)
         const totalGain = clipGainLinear * trackVolume * eqMultiplier;
         
         // ピークを抽出してエフェクトを適用
         const thresholdLinear = limiterEnabled ? Math.pow(10, limiterThreshold / 20) : 999;
         
+        // キーフレームが存在するかチェック
+        const hasGainKeyframes = window.keyframeManager && window.keyframeManager.hasKeyframes(clipId, 'gain');
+        const hasVolumeKeyframes = window.keyframeManager && window.keyframeManager.hasKeyframes(clipId, 'volume');
+        
+        // デバッグ情報
+        if (hasGainKeyframes || hasVolumeKeyframes) {
+            console.log(`🎨 波形描画: clipId=${clipId}, hasGain=${hasGainKeyframes}, hasVolume=${hasVolumeKeyframes}`);
+            if (hasGainKeyframes) {
+                const gainKfs = window.keyframeManager.getParameterKeyframes(clipId, 'gain');
+                console.log(`  Gainキーフレーム: ${gainKfs.map(kf => `${kf.time.toFixed(2)}s=${kf.value.toFixed(1)}dB`).join(', ')}`);
+            }
+            if (hasVolumeKeyframes) {
+                const volKfs = window.keyframeManager.getParameterKeyframes(clipId, 'volume');
+                console.log(`  Volumeキーフレーム: ${volKfs.map(kf => `${kf.time.toFixed(2)}s=${kf.value.toFixed(2)}`).join(', ')}`);
+            }
+        }
+        
+        // キーフレームアニメーションの影響を考慮した波形データを生成
+        let debugCount = 0; // デバッグ用：最初の数サンプルのみログ出力
         for (let i = 0; i < samples; i++) {
             let blockStart = startSample + (blockSize * i);  // オフセット位置から開始
             let max = 0;
+            
+            // この波形セグメントの時間位置を計算（クリップ内の相対時間）
+            // キーフレームの時間は「クリップの先頭(0秒)」からの時間なので、
+            // offsetを含めずにクリップ内の相対位置のみを使う
+            const segmentTime = (i / samples) * visibleDuration;
+            
+            // キーフレームゲインを計算（キーフレーム範囲内の場合のみ適用）
+            let keyframeGainLinear = 1.0;
+            if (hasGainKeyframes) {
+                const result = window.keyframeManager.getValueAtTimeInRange(clipId, 'gain', segmentTime, 0);
+                if (debugCount < 3 && (hasGainKeyframes || hasVolumeKeyframes)) {
+                    console.log(`  サンプル${i}: time=${segmentTime.toFixed(3)}s, gain.inRange=${result.inRange}, gain.value=${result.value.toFixed(2)}`);
+                }
+                if (result.inRange) {
+                    keyframeGainLinear = Math.pow(10, result.value / 20);
+                }
+            }
+            
+            // キーフレームボリュームを計算（キーフレーム範囲内の場合のみ適用）
+            let keyframeVolume = 1.0;
+            if (hasVolumeKeyframes) {
+                const result = window.keyframeManager.getValueAtTimeInRange(clipId, 'volume', segmentTime, 1.0);
+                if (debugCount < 3 && hasVolumeKeyframes) {
+                    console.log(`         vol.inRange=${result.inRange}, vol.value=${result.value.toFixed(2)}`);
+                }
+                if (result.inRange) {
+                    keyframeVolume = result.value;
+                }
+            }
+            
+            if (debugCount < 3 && (hasGainKeyframes || hasVolumeKeyframes)) {
+                console.log(`         → multiplier: gain=${keyframeGainLinear.toFixed(3)}, vol=${keyframeVolume.toFixed(3)}`);
+                debugCount++;
+            }
+            
+            // このセグメントの総合ゲイン
+            // キーフレーム範囲内の場合のみその値を適用、範囲外は基本ゲインのみ
+            const segmentGain = totalGain * keyframeGainLinear * keyframeVolume;
+            
             for (let j = 0; j < blockSize; j++) {
                 const sampleIndex = blockStart + j;
                 if (sampleIndex >= endSample) break;  // 終了位置を超えたら停止
-                const val = Math.abs(rawData[sampleIndex] || 0) * totalGain;
+                const val = Math.abs(rawData[sampleIndex] || 0) * segmentGain;
                 if (val > max) max = val;
             }
             
@@ -895,6 +975,18 @@ class TrackManager {
             const barHeight = value * middle * 0.85;
             const x = i * barWidth;
             
+            // この波形セグメントの時間位置（クリップ内の相対時間）
+            const segmentTime = (i / samples) * visibleDuration;
+            
+            // パンキーフレームを取得
+            let pan = 0; // デフォルトはセンター
+            if (clip.keyframes && clip.keyframes.pan && clip.keyframes.pan.length > 0) {
+                const panValue = window.keyframeManager.getValueAtTime(clip.id, 'pan', segmentTime);
+                if (panValue !== null) {
+                    pan = panValue;
+                }
+            }
+            
             // クリッピング検出
             const isClipping = value > 1.0;
             
@@ -904,11 +996,32 @@ class TrackManager {
             
             let color;
             if (isClipping) {
-                color = 'rgba(214, 115, 115, 0.8)'; // 赤：クリッピング
+                color = 'rgba(214, 115, 115, 0.8)'; // Red: Clipping
             } else if (isLimiterActive) {
-                color = 'rgba(255, 200, 100, 0.7)'; // オレンジ：リミッター作動中
+                color = 'rgba(255, 200, 100, 0.7)'; // Orange: Limiter active
             } else {
-                color = 'rgba(139, 111, 71, 0.6)'; // チョコレート：通常
+                // Change color based on pan
+                // Center (0): Chocolate
+                // Right (+1): Pink
+                // Left (-1): Light blue
+                if (pan > 0.05) {
+                    // Right pan -> Pink
+                    const pinkAmount = Math.abs(pan); // 0-1
+                    const r = 139 + (255 - 139) * pinkAmount;
+                    const g = 111 + (192 - 111) * pinkAmount;
+                    const b = 71 + (203 - 71) * pinkAmount;
+                    color = `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, 0.6)`;
+                } else if (pan < -0.05) {
+                    // Left pan -> Light blue
+                    const blueAmount = Math.abs(pan); // 0-1
+                    const r = 139 + (135 - 139) * blueAmount;
+                    const g = 111 + (206 - 111) * blueAmount;
+                    const b = 71 + (235 - 71) * blueAmount;
+                    color = `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, 0.6)`;
+                } else {
+                    // Center -> Chocolate
+                    color = 'rgba(139, 111, 71, 0.6)';
+                }
             }
             
             ctx.fillStyle = color;

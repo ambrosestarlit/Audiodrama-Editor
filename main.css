@@ -384,7 +384,7 @@ body {
     bottom: 0;
     width: 2px;
     background: var(--color-danger);
-    z-index: 100;
+    z-index: 9999; /* 最上位に表示 */
     pointer-events: none;
     box-shadow: 0 0 8px rgba(214, 115, 115, 0.6);
 }
@@ -392,17 +392,19 @@ body {
 .playhead::before {
     content: '';
     position: absolute;
-    top: -8px; /* 三角形の高さ分上に */
-    left: -6px;
-    width: 0;
-    height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 8px solid var(--color-danger);
+    top: -20px; /* くまさん画像の高さ分上に */
+    left: -18px; /* くまさん画像の幅の半分 */
+    width: 36px; /* くまさん画像の幅 */
+    height: 36px; /* くまさん画像の高さ */
+    background-image: url('seekbar-bear.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
     cursor: grab;
-    pointer-events: auto; /* ▽部分だけクリック可能に */
-    padding: 4px; /* クリック範囲を広げる */
-    margin: -4px; /* paddingで広げた分を戻す */
+    pointer-events: auto; /* くまさん部分だけクリック可能に */
+    padding: 8px; /* クリック範囲を広げる */
+    margin: -8px; /* paddingで広げた分を戻す */
+    z-index: 10000; /* プレイヘッドより更に上 */
 }
 
 .playhead.dragging::before {
@@ -682,6 +684,35 @@ body {
     color: var(--color-primary);
     margin: 0 0 var(--spacing-md) 0;
     font-weight: normal;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* くまさんキーフレームボタン */
+.keyframe-bear-btn {
+    width: 28px;
+    height: 28px;
+    background-image: url('key.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+    flex-shrink: 0;
+    padding: 0;
+    margin: 0;
+}
+
+.keyframe-bear-btn:hover {
+    transform: scale(1.15);
+    opacity: 0.8;
+}
+
+.keyframe-bear-btn:active {
+    transform: scale(0.95);
 }
 
 .eq-controls,
@@ -1201,5 +1232,71 @@ input[type="range"]:disabled::-moz-range-thumb {
     height: 1px;
     background: var(--color-border-light);
     margin: var(--spacing-xs) 0;
+}
+
+/* ==========================================
+   タイムラインキーフレームUI
+   ========================================== */
+
+/* キーフレームマーカー（くま） */
+.keyframe-diamond {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-image: url('key.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    z-index: 20;
+    transition: all var(--transition-fast);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    transform: translateX(-50%); /* 中央揃え */
+}
+
+.keyframe-diamond:hover {
+    transform: translateX(-50%) scale(1.3);
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.4));
+}
+
+/* パラメータごとに色を変える（カラーフィルター） */
+.keyframe-diamond[data-parameter="volume"] {
+    filter: drop-shadow(0 2px 4px rgba(74, 144, 226, 0.6)) hue-rotate(0deg);
+}
+
+.keyframe-diamond[data-parameter="pan"] {
+    filter: drop-shadow(0 2px 4px rgba(226, 74, 144, 0.6)) hue-rotate(280deg);
+}
+
+.keyframe-diamond[data-parameter="gain"] {
+    filter: drop-shadow(0 2px 4px rgba(144, 226, 74, 0.6)) hue-rotate(90deg);
+}
+
+/* エフェクトパラメーター用カラー */
+.keyframe-diamond[data-parameter^="eq"],
+.keyframe-diamond[data-parameter*="Limiter"],
+.keyframe-diamond[data-parameter*="Expander"],
+.keyframe-diamond[data-parameter*="pass"] {
+    filter: drop-shadow(0 2px 4px rgba(255, 165, 0, 0.6)) hue-rotate(30deg);
+}
+
+.keyframe-diamond[data-parameter="volume"]:hover {
+    filter: drop-shadow(0 3px 8px rgba(74, 144, 226, 0.8)) hue-rotate(0deg);
+}
+
+.keyframe-diamond[data-parameter="pan"]:hover {
+    filter: drop-shadow(0 3px 8px rgba(226, 74, 144, 0.8)) hue-rotate(280deg);
+}
+
+.keyframe-diamond[data-parameter="gain"]:hover {
+    filter: drop-shadow(0 3px 8px rgba(144, 226, 74, 0.8)) hue-rotate(90deg);
+}
+
+/* エフェクトパラメーター用ホバー */
+.keyframe-diamond[data-parameter^="eq"]:hover,
+.keyframe-diamond[data-parameter*="Limiter"]:hover,
+.keyframe-diamond[data-parameter*="Expander"]:hover,
+.keyframe-diamond[data-parameter*="pass"]:hover {
+    filter: drop-shadow(0 3px 8px rgba(255, 165, 0, 0.8)) hue-rotate(30deg);
 }
 

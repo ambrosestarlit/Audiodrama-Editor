@@ -666,6 +666,8 @@ class AudioEngine {
         const clipStartTime = clip.startTime;
         const clipEndTime = clipStartTime + clip.duration;
         
+        console.log(`🎬 playClip called: clipId=${clip.id}, startTime=${clipStartTime}`);
+        
         // 再生範囲外のクリップはスキップ
         if (playbackStartTime > clipEndTime) return;
         
@@ -683,36 +685,72 @@ class AudioEngine {
         // キーフレーム用のStereoPanner（パン）
         const panNode = this.audioContext.createStereoPanner();
         
-        // 接続: Source -> ClipGain -> VolumeGain -> Pan -> Track
+        // 🐻 クリップ専用のイコライザーノードを作成
+        const clipEQ = {
+            low: this.audioContext.createBiquadFilter(),
+            mid: this.audioContext.createBiquadFilter(),
+            high: this.audioContext.createBiquadFilter()
+        };
+        
+        // EQの設定（デフォルトはフラット）
+        clipEQ.low.type = 'lowshelf';
+        clipEQ.low.frequency.value = 100;
+        clipEQ.low.gain.value = 0;  // フラット
+        
+        clipEQ.mid.type = 'peaking';
+        clipEQ.mid.frequency.value = 1000;
+        clipEQ.mid.Q.value = 1;
+        clipEQ.mid.gain.value = 0;  // フラット
+        
+        clipEQ.high.type = 'highshelf';
+        clipEQ.high.frequency.value = 10000;
+        clipEQ.high.gain.value = 0;  // フラット
+        
+        // 🐻 接続: Source -> ClipGain -> VolumeGain -> Pan -> ClipEQ -> Track
         source.connect(clipGainNode);
         clipGainNode.connect(volumeGainNode);
         volumeGainNode.connect(panNode);
-        panNode.connect(track.gain);
+        
+        // EQ経由で接続
+        panNode.connect(clipEQ.low);
+        clipEQ.low.connect(clipEQ.mid);
+        clipEQ.mid.connect(clipEQ.high);
+        clipEQ.high.connect(track.gain);
+        
+        // リアルタイム更新用にノードへの参照を保存
+        clip.activeNodes = {
+            clipGainNode,
+            volumeGainNode,
+            panNode,
+            clipEQ,
+            source
+        };
+        
+        // クリップの実際のAudioContext開始時刻を計算
+        let clipContextStartTime;
+        if (playbackStartTime === 0 && clipStartTime === 0) {
+            clipContextStartTime = this.audioContext.currentTime;
+        } else {
+            clipContextStartTime = contextStartTime + Math.max(0, clipStartTime - playbackStartTime);
+        }
         
         // クリップゲインを適用（キーフレームまたは固定値）
         const baseClipGain = clip.gain ? Math.pow(10, clip.gain / 20) : 1.0;
-        this.applyKeyframeAutomation(clip, 'gain', clipGainNode.gain, contextStartTime, clipStartTime, baseClipGain);
+        this.applyKeyframeAutomation(clip, 'gain', clipGainNode.gain, clipContextStartTime, clipStartTime, baseClipGain, playbackStartTime, clipEndTime);
         
         // ボリュームキーフレームを適用
-        this.applyKeyframeAutomation(clip, 'volume', volumeGainNode.gain, contextStartTime, clipStartTime, 1.0);
+        this.applyKeyframeAutomation(clip, 'volume', volumeGainNode.gain, clipContextStartTime, clipStartTime, 1.0, playbackStartTime, clipEndTime);
         
         // パンキーフレームを適用
-        this.applyKeyframeAutomation(clip, 'pan', panNode.pan, contextStartTime, clipStartTime, 0);
+        this.applyKeyframeAutomation(clip, 'pan', panNode.pan, clipContextStartTime, clipStartTime, 0, playbackStartTime, clipEndTime);
         
-        // フェードイン
-        if (clip.fadeIn > 0) {
-            clipGainNode.gain.setValueAtTime(0, contextStartTime);
-            clipGainNode.gain.linearRampToValueAtTime(baseClipGain, contextStartTime + clip.fadeIn);
-        } else {
-            clipGainNode.gain.setValueAtTime(baseClipGain, contextStartTime);
-        }
+        // 🐻 イコライザーキーフレームを適用
+        this.applyKeyframeAutomation(clip, 'eqLow', clipEQ.low.gain, clipContextStartTime, clipStartTime, clipEQ.low.gain.value, playbackStartTime, clipEndTime);
+        this.applyKeyframeAutomation(clip, 'eqMid', clipEQ.mid.gain, clipContextStartTime, clipStartTime, clipEQ.mid.gain.value, playbackStartTime, clipEndTime);
+        this.applyKeyframeAutomation(clip, 'eqHigh', clipEQ.high.gain, clipContextStartTime, clipStartTime, clipEQ.high.gain.value, playbackStartTime, clipEndTime);
         
-        // フェードアウト
-        if (clip.fadeOut > 0) {
-            const fadeOutStart = contextStartTime + clip.duration - clip.fadeOut;
-            clipGainNode.gain.setValueAtTime(baseClipGain, fadeOutStart);
-            clipGainNode.gain.linearRampToValueAtTime(0, fadeOutStart + clip.fadeOut);
-        }
+        // 🐻 注意: フェードイン/アウト処理はキーフレームと競合するため削除
+        // フェード効果が必要な場合は、gainキーフレームで設定してください
         
         // 再生開始位置とオフセットを計算
         const offset = clip.offset + Math.max(0, playbackStartTime - clipStartTime);
@@ -734,61 +772,143 @@ class AudioEngine {
             clipGainNode.disconnect();
             volumeGainNode.disconnect();
             panNode.disconnect();
+            // 🐻 EQノードも切断
+            clipEQ.low.disconnect();
+            clipEQ.mid.disconnect();
+            clipEQ.high.disconnect();
         };
         
         clip.source = source;
     }
     
     // キーフレームオートメーションを適用
-    applyKeyframeAutomation(clip, parameter, audioParam, contextStartTime, clipStartTime, defaultValue) {
+    applyKeyframeAutomation(clip, parameter, audioParam, contextStartTime, clipStartTime, defaultValue, playbackStartTime = 0, clipEndTime = null) {
         if (!window.keyframeManager) return;
         
         const keyframes = window.keyframeManager.getParameterKeyframes(clip.id, parameter);
         
+        console.log(`🐻 [${parameter}] キーフレーム取得: clipId=${clip.id}, count=${keyframes.length}`);
+        
         if (keyframes.length === 0) {
             // キーフレームがない場合はデフォルト値を設定
             audioParam.setValueAtTime(defaultValue, contextStartTime);
+            console.log(`  デフォルト値を使用: ${defaultValue}`);
             return;
         }
         
-        // キーフレームの値をAudioParamに設定
-        keyframes.forEach((kf, index) => {
-            const time = contextStartTime + (kf.time - clipStartTime);
+        console.log(`🐻 [${parameter}] キーフレーム適用: ${keyframes.length}個`, keyframes.map(kf => `${kf.time.toFixed(2)}s: ${kf.value.toFixed(2)}`));
+        
+        // CRITICAL: Web Audio APIでは過去の時間に値を設定できない
+        // すべての時間が audioContext.currentTime より後である必要がある
+        const now = this.audioContext.currentTime;
+        const minTime = now + 0.001; // 1ms後以降
+        
+        // 🐻 CRITICAL: AudioParamのタイムラインをクリア
+        // 前回の設定が残っているとキーフレームが正しく動作しない
+        audioParam.cancelScheduledValues(now);
+        
+        // 🐻 CRITICAL: 現在値を強制的にデフォルト値にリセット
+        // これをしないと、前回の再生で0になった値がそのまま残る
+        audioParam.setValueAtTime(defaultValue, now);
+        console.log(`  🔄 AudioParam リセット: ${parameter}=${defaultValue} @ now=${now.toFixed(3)}`);
+        
+        // 🐻 再生開始位置（クリップ内の相対時間）を計算
+        const playbackOffsetInClip = Math.max(0, playbackStartTime - clipStartTime);
+        
+        // 🐻 最初のキーフレームが再生開始位置付近にある場合は、クリップ開始時の設定をスキップ
+        // そうでない場合は、再生開始位置での値を設定
+        const firstKfTime = keyframes[0].time;
+        const skipInitialSet = Math.abs(playbackOffsetInClip - firstKfTime) < 0.01;
+        
+        if (!skipInitialSet) {
+            // 🐻 再生開始位置でのキーフレーム値を計算
+            let initialValue;
+            const result = window.keyframeManager.getValueAtTimeInRange(clip.id, parameter, playbackOffsetInClip, defaultValue);
+            initialValue = result.inRange ? result.value : defaultValue;
             
-            if (index === 0) {
-                // 最初のキーフレーム
+            // 🐻 クリップ開始時に再生位置での値を設定
+            const startTime = Math.max(minTime, contextStartTime);
+            audioParam.setValueAtTime(initialValue, startTime);
+            console.log(`  クリップ開始(${playbackOffsetInClip.toFixed(2)}s地点): ${initialValue.toFixed(2)} @ ${(startTime - now).toFixed(3)}s後`);
+        } else {
+            console.log(`  クリップ開始スキップ: 最初のKFが${firstKfTime.toFixed(2)}s地点にあるため`);
+        }
+        
+        // 🐻 すべてのキーフレームを順番に設定
+        for (let i = 0; i < keyframes.length; i++) {
+            const kf = keyframes[i];
+            let time = contextStartTime + kf.time;
+            
+            // CRITICAL: 時間が過去の場合は現在時刻に調整
+            if (time < minTime) {
+                time = minTime;
+            }
+            
+            if (i === 0) {
+                // 🐻 最初のキーフレーム: 必ずsetValueAtTimeで設定
                 audioParam.setValueAtTime(kf.value, time);
+                console.log(`  KF${i}: ${kf.value.toFixed(2)} @ ${(time - now).toFixed(3)}s後 [SET]`);
             } else {
-                const prevKf = keyframes[index - 1];
+                const prevKf = keyframes[i - 1];
                 
-                // 補間タイプに応じて適用
+                // 🐻 補間タイプに応じて適用
                 switch (prevKf.interpolation) {
                     case 'linear':
+                        // 🐻 線形補間: linearRampを使う
+                        // 注意: 前のキーフレームは既に設定済みなので、ここでは設定しない!
                         audioParam.linearRampToValueAtTime(kf.value, time);
+                        console.log(`  KF${i}: ${kf.value.toFixed(2)} @ ${(time - now).toFixed(3)}s後 [LINEAR]`);
                         break;
+                        
                     case 'step':
-                        audioParam.setValueAtTime(prevKf.value, time);
+                        // 🐻 ステップ: 瞬時に変化
                         audioParam.setValueAtTime(kf.value, time);
+                        console.log(`  KF${i}: ${kf.value.toFixed(2)} @ ${(time - now).toFixed(3)}s後 [STEP]`);
                         break;
+                        
                     case 'ease-in':
                     case 'ease-out':
                     case 'ease-in-out':
-                        // Web Audio APIではカスタムイージングは難しいので、
-                        // 複数のlinearRampで近似
-                        this.approximateEasing(audioParam, prevKf, kf, time, contextStartTime, clipStartTime);
+                        // 🐻 イージング: 複数のlinearRampで近似
+                        this.approximateEasing(audioParam, prevKf, kf, contextStartTime, now);
+                        console.log(`  KF${i}: ${kf.value.toFixed(2)} @ ${(time - now).toFixed(3)}s後 [${prevKf.interpolation.toUpperCase()}]`);
                         break;
+                        
                     default:
+                        // デフォルトは線形補間
                         audioParam.linearRampToValueAtTime(kf.value, time);
+                        console.log(`  KF${i}: ${kf.value.toFixed(2)} @ ${(time - now).toFixed(3)}s後 [LINEAR(default)]`);
                 }
             }
-        });
+        }
+        
+        // 🐻 CRITICAL: 最後のキーフレーム以降はデフォルト値に戻す
+        // これにより、キーフレーム範囲外では通常の状態に戻る
+        if (clipEndTime) {
+            const lastKf = keyframes[keyframes.length - 1];
+            const lastKfContextTime = contextStartTime + lastKf.time;
+            const clipContextEndTime = contextStartTime + (clipEndTime - clipStartTime);
+            
+            // 最後のキーフレームがクリップ終了より前にある場合
+            if (lastKfContextTime < clipContextEndTime - 0.001) {
+                const resetTime = Math.max(minTime, lastKfContextTime + 0.001);
+                audioParam.setValueAtTime(defaultValue, resetTime);
+                console.log(`  最後のKF(${lastKf.time.toFixed(2)}s)後にデフォルトに戻す: ${defaultValue.toFixed(2)} @ ${(resetTime - now).toFixed(3)}s後`);
+            } else {
+                console.log(`  最後のKF(${lastKf.time.toFixed(2)}s)がクリップ終了付近のため、デフォルト復帰なし`);
+            }
+        } else {
+            console.log(`  clipEndTime未指定のため、最後のKF以降は値を維持: ${keyframes[keyframes.length - 1].value.toFixed(2)}`);
+        }
     }
     
     // イージングを複数のlinearRampで近似
-    approximateEasing(audioParam, startKf, endKf, endTime, contextStartTime, clipStartTime) {
+    approximateEasing(audioParam, startKf, endKf, contextStartTime, now) {
         const steps = 10;
-        const startTime = contextStartTime + (startKf.time - clipStartTime);
+        const startTime = contextStartTime + startKf.time;
+        const endTime = contextStartTime + endKf.time;
         const duration = endTime - startTime;
+        const minTime = now + 0.001;
         
         for (let i = 1; i <= steps; i++) {
             const t = i / steps;
@@ -811,7 +931,12 @@ class AudioEngine {
             }
             
             const value = startKf.value + (endKf.value - startKf.value) * easedT;
-            const time = startTime + (duration * t);
+            let time = startTime + (duration * t);
+            
+            // 過去の時間にならないように調整
+            if (time < minTime) {
+                time = minTime;
+            }
             
             audioParam.linearRampToValueAtTime(value, time);
         }
